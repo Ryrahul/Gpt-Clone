@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { currentUser } from "@clerk/nextjs/server";
 import dbConnect from "@/lib/mongo";
 import Chat from "@/models/Chat";
 import Message from "@/models/Message";
@@ -9,9 +10,16 @@ import type { ChatItem } from "@/types/type";
 
 export async function getChats(): Promise<ChatItem[]> {
   try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+    console.log(await user?.id);
+
     await dbConnect();
 
-    const chats = await Chat.find({})
+    const chats = await Chat.find({ userId: user.id })
       .populate({
         path: "messages",
         model: "Message",
@@ -52,9 +60,15 @@ export async function getChats(): Promise<ChatItem[]> {
 
 export async function getChat(chatId: string): Promise<ChatItem | null> {
   try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
     await dbConnect();
 
-    const chat = await Chat.findById(chatId)
+    const chat = await Chat.findOne({ _id: chatId, userId: user.id })
       .populate({
         path: "messages",
         model: "Message",
@@ -88,11 +102,16 @@ export async function getChat(chatId: string): Promise<ChatItem | null> {
 
 export async function createChat(messages: AIMessage[]): Promise<ChatItem> {
   try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
     await dbConnect();
 
-    // Create the chat first with a temporary userId
     const chat = await Chat.create({
-      userId: "temp-user", // Temporary until auth is implemented
+      userId: user.id,
       title: messages[0]?.content?.slice(0, 30) || "New conversation",
       messages: [],
     });
@@ -101,7 +120,6 @@ export async function createChat(messages: AIMessage[]): Promise<ChatItem> {
       throw new Error("Failed to create chat");
     }
 
-    // Create messages and link them to the chat
     const messageIds = [];
     for (const msg of messages) {
       const message = await Message.create({
@@ -112,11 +130,9 @@ export async function createChat(messages: AIMessage[]): Promise<ChatItem> {
       messageIds.push(message._id);
     }
 
-    // Update chat with message references
     chat.messages = messageIds;
     await chat.save();
 
-    // Populate the chat with messages for return
     const populatedChat = await Chat.findById(chat._id)
       .populate({
         path: "messages",
@@ -159,9 +175,15 @@ export async function updateChat(
   messages: AIMessage[]
 ): Promise<ChatItem> {
   try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
     await dbConnect();
 
-    const chat = await Chat.findById(chatId);
+    const chat = await Chat.findOne({ _id: chatId, userId: user.id });
 
     if (!chat) {
       throw new Error("Chat not found");
@@ -226,9 +248,15 @@ export async function updateChat(
 
 export async function deleteChat(chatId: string): Promise<void> {
   try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
     await dbConnect();
 
-    const chat = await Chat.findById(chatId);
+    const chat = await Chat.findOne({ _id: chatId, userId: user.id });
 
     if (!chat) {
       throw new Error("Chat not found");
@@ -252,10 +280,16 @@ export async function updateChatTitle(
   title: string
 ): Promise<void> {
   try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
     await dbConnect();
 
-    const updatedChat = await Chat.findByIdAndUpdate(
-      chatId,
+    const updatedChat = await Chat.findOneAndUpdate(
+      { _id: chatId, userId: user.id },
       { title },
       { new: true }
     );
