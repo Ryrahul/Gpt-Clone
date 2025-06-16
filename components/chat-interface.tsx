@@ -4,7 +4,7 @@ import type React from "react";
 import { useRef, useEffect, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Plus, Mic } from "lucide-react";
+import { Send, Plus, Mic, Brain } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -35,11 +35,18 @@ export function ChatInterface({
   const chatIdRef = useRef<string | null>(chatId);
   const [hasMounted, setHasMounted] = useState(false);
   const [hasRestoredMessage, setHasRestoredMessage] = useState(false);
+  const [showMemoryIndicator, setShowMemoryIndicator] = useState(false);
+
   const chatInstanceId = useRef<string>(
     `chat-${chatId || "new"}-${Date.now()}`
   );
 
-  // Initialize useChat hook - this must be called unconditionally
+  useEffect(() => {
+    if (isLoaded) {
+      setHasMounted(true);
+    }
+  }, [isLoaded]);
+
   const {
     messages,
     input,
@@ -53,8 +60,13 @@ export function ChatInterface({
     api: "/api/chat",
     initialMessages: initialMessages,
     id: chatInstanceId.current,
+    headers: {
+      "x-chat-id": chatId || "new-chat",
+    },
     onFinish: () => {
       console.log("AI response finished");
+      setShowMemoryIndicator(true);
+      setTimeout(() => setShowMemoryIndicator(false), 2000);
     },
     onError: (error) => {
       console.error("Chat error:", error);
@@ -67,13 +79,6 @@ export function ChatInterface({
     },
   });
 
-  // All useEffect hooks must be called unconditionally
-  useEffect(() => {
-    if (isLoaded) {
-      setHasMounted(true);
-    }
-  }, [isLoaded]);
-
   // Restore pending message from sessionStorage after sign-in
   useEffect(() => {
     if (isSignedIn && !hasRestoredMessage && !chatId && hasMounted) {
@@ -82,7 +87,6 @@ export function ChatInterface({
         setInput(pendingMessage);
         sessionStorage.removeItem("pendingMessage");
         setHasRestoredMessage(true);
-        // Auto-focus the textarea
         setTimeout(() => {
           textareaRef.current?.focus();
         }, 100);
@@ -96,12 +100,9 @@ export function ChatInterface({
 
     const saveMessages = async () => {
       if (isSavingRef.current || chatIdRef.current !== chatId) return;
-
       if (messages.length <= lastSavedLengthRef.current) return;
-
       if (messages.length > 0 && messages[messages.length - 1]?.role === "user")
         return;
-
       if (isLoading) return;
 
       try {
@@ -167,7 +168,6 @@ export function ChatInterface({
     }
   }, [hasMounted, isLoaded, isSignedIn, router]);
 
-  // All useCallback hooks must be called unconditionally
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -242,6 +242,14 @@ export function ChatInterface({
             />
           </svg>
         </div>
+
+        {/* Memory Indicator */}
+        {showMemoryIndicator && (
+          <div className="flex items-center gap-2 text-sm text-green-400 animate-pulse">
+            <Brain className="w-4 h-4" />
+            <span>Memory updated</span>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-hidden bg-[#212121]">
@@ -269,9 +277,17 @@ export function ChatInterface({
                     />
                   </svg>
                 </div>
-                <h1 className="text-3xl font-semibold text-white mb-8">
+                <h1 className="text-3xl font-semibold text-white mb-4">
                   How can I help you today?
                 </h1>
+                <p className="text-white/60 text-center max-w-md mb-2">
+                  I'll remember our conversations to provide more personalized
+                  assistance.
+                </p>
+                <div className="flex items-center gap-2 text-sm text-green-400/70">
+                  <Brain className="w-4 h-4" />
+                  <span>Memory-enhanced AI</span>
+                </div>
               </div>
             ) : (
               <div className="min-h-full">
@@ -366,8 +382,9 @@ export function ChatInterface({
               </div>
             </div>
           </form>
-          <div className="text-center text-xs text-white/50 mt-3">
-            <span>ChatGPT can make mistakes. Check important info.</span>
+          <div className="text-center text-xs text-white/50 mt-3 flex items-center justify-center gap-2">
+            <Brain className="w-3 h-3" />
+            <span>ChatGPT with memory - remembers your conversations</span>
           </div>
         </div>
       </div>

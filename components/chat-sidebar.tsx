@@ -2,8 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus } from "lucide-react";
+import { Plus, Brain } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { ChatHistory } from "@/components/chat-history";
 import type { ChatItem } from "@/types/type";
 
@@ -24,6 +25,8 @@ export function ChatSidebar({
   onEditChat,
   onDeleteChat,
 }: ChatSidebarProps) {
+  const router = useRouter();
+
   return (
     <div className="w-96 bg-[#171717] border-r border-white/10 flex flex-col h-screen">
       {/* Fixed header with New Chat button and User Button */}
@@ -38,13 +41,22 @@ export function ChatSidebar({
             }}
           />
         </div>
-        <Button
-          onClick={onNewChat}
-          className="w-full h-12 bg-transparent border border-white/20 text-white hover:bg-white/10 flex items-center gap-3 text-base font-medium"
-        >
-          <Plus className="h-5 w-5" />
-          New chat
-        </Button>
+        <div className="space-y-2">
+          <Button
+            onClick={onNewChat}
+            className="w-full h-12 bg-transparent border border-white/20 text-white hover:bg-white/10 flex items-center gap-3 text-base font-medium"
+          >
+            <Plus className="h-5 w-5" />
+            New chat
+          </Button>
+          <Button
+            onClick={() => router.push("/memories")}
+            className="w-full h-10 bg-transparent border border-green-400/20 text-green-400 hover:bg-green-400/10 flex items-center gap-3 text-sm font-medium"
+          >
+            <Brain className="h-4 w-4" />
+            View Memories
+          </Button>
+        </div>
       </div>
 
       {/* Scrollable chat history */}
