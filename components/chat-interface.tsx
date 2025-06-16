@@ -7,29 +7,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Plus, Mic } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import type { Message } from "ai";
+import {
+  messageConverters,
+  scrollUtils,
+  createDebouncedSave,
+  chatStateUtils,
+  formUtils,
+  chatInitUtils,
+  chatConstants,
+} from "@/lib/utils";
 
 interface ChatInterfaceProps {
   chatId: string | null;
   initialMessages: Message[];
   onUpdateChat?: (chatId: string, messages: Message[]) => void;
   onCreateNewChat?: (messages: Message[]) => void;
-}
-
-function convertToDbMessage(message: Message): Message {
-  return {
-    id: message.id,
-    role: message.role,
-    content: message.content,
-  };
-}
-
-function convertToAiMessage(message: Message): Message {
-  return {
-    id: message.id,
-    role: message.role,
-    content: message.content,
-    ...(message.parts ? { parts: message.parts } : {}),
-  };
 }
 
 export function ChatInterface({
@@ -48,6 +40,12 @@ export function ChatInterface({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedSave = useMemo(
+    () => createDebouncedSave(chatConstants.SAVE_DELAY),
+    []
+  );
+
   const {
     messages,
     input,
@@ -65,80 +63,47 @@ export function ChatInterface({
   });
 
   useEffect(() => {
-    if (pendingUserMessage && messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (
-        lastMessage.role === "user" &&
-        lastMessage.content === pendingUserMessage.content
-      ) {
-        setPendingUserMessage(null);
-      }
+    if (
+      chatStateUtils.isPendingMessageProcessed(messages, pendingUserMessage)
+    ) {
+      setPendingUserMessage(null);
     }
   }, [messages, pendingUserMessage]);
 
   const displayMessages = useMemo(() => {
-    const baseMessages = messages;
-    if (
-      pendingUserMessage &&
-      !baseMessages.find(
-        (m) => m.content === pendingUserMessage.content && m.role === "user"
-      )
-    ) {
-      return [...baseMessages, pendingUserMessage];
-    }
-    return baseMessages;
+    return chatStateUtils.mergePendingMessage(messages, pendingUserMessage);
   }, [messages, pendingUserMessage]);
 
-  const debouncedSave = useCallback(
+  const saveMessages = useCallback(
     async (messagesToSave: Message[]) => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      debouncedSave(async () => {
+        const dbMessages = messagesToSave.map(messageConverters.toDbMessage);
+        console.log("Saving messages:", dbMessages.length);
 
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          const dbMessages = messagesToSave.map(convertToDbMessage);
-          console.log("Saving messages:", dbMessages.length);
-
-          if (chatId && onUpdateChat) {
-            await onUpdateChat(chatId, dbMessages);
-          } else if (!chatId && onCreateNewChat && !hasCreatedChat) {
-            setHasCreatedChat(true);
-            setIsTransitioning(true);
-            await onCreateNewChat(dbMessages);
-          }
-
-          setLastSavedMessageCount(messagesToSave.length);
-        } catch (error) {
-          console.error("Error saving messages:", error);
+        if (chatId && onUpdateChat) {
+          await onUpdateChat(chatId, dbMessages);
+        } else if (!chatId && onCreateNewChat && !hasCreatedChat) {
+          setHasCreatedChat(true);
+          setIsTransitioning(true);
+          await onCreateNewChat(dbMessages);
         }
-      }, 500);
+
+        setLastSavedMessageCount(messagesToSave.length);
+      });
     },
-    [chatId, onUpdateChat, onCreateNewChat, hasCreatedChat]
+    [chatId, onUpdateChat, onCreateNewChat, hasCreatedChat, debouncedSave]
   );
 
   useEffect(() => {
-    console.log(
-      "Chat initialization - chatId:",
+    chatInitUtils.initializeChat(
       chatId,
-      "initialMessages:",
-      initialMessages.length
+      initialMessages,
+      setMessages,
+      setLastSavedMessageCount,
+      setHasCreatedChat,
+      setIsTransitioning,
+      setPendingUserMessage
     );
-
-    if (chatId && initialMessages.length > 0) {
-      const aiMessages = initialMessages.map(convertToAiMessage);
-      setMessages(aiMessages);
-      setLastSavedMessageCount(aiMessages.length);
-      setHasCreatedChat(false);
-      setIsTransitioning(false);
-      setPendingUserMessage(null);
-    } else if (!chatId) {
-      setMessages([]);
-      setLastSavedMessageCount(0);
-      setHasCreatedChat(false);
-      setIsTransitioning(false);
-      setPendingUserMessage(null);
-    }
 
     return () => {
       if (saveTimeoutRef.current) {
@@ -148,45 +113,29 @@ export function ChatInterface({
   }, [chatId, initialMessages, setMessages]);
 
   useEffect(() => {
-    const shouldSave =
-      messages.length > 0 &&
-      messages.length > lastSavedMessageCount &&
-      messages[messages.length - 1]?.role === "assistant" &&
-      !isLoading;
-
-    if (shouldSave) {
-      debouncedSave(messages);
+    if (
+      chatStateUtils.shouldSaveMessages(
+        messages,
+        lastSavedMessageCount,
+        isLoading
+      )
+    ) {
+      saveMessages(messages);
     }
-  }, [messages, isLoading, lastSavedMessageCount, debouncedSave]);
+  }, [messages, isLoading, lastSavedMessageCount, saveMessages]);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      );
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    }
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height =
-        textareaRef.current.scrollHeight + "px";
-    }
+    scrollUtils.scrollToBottom(scrollAreaRef);
+    scrollUtils.autoResizeTextarea(textareaRef);
   }, [displayMessages, input]);
 
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (!input.trim() || isLoading || isTransitioning) return;
+      if (!formUtils.canSubmitMessage(input, isLoading, isTransitioning))
+        return;
 
-      const userMessage: Message = {
-        id: `user-${Date.now()}`,
-        role: "user",
-        content: input.trim(),
-      };
-
+      const userMessage = messageConverters.createUserMessage(input);
       setPendingUserMessage(userMessage);
       handleSubmit(e);
     },
@@ -195,19 +144,17 @@ export function ChatInterface({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        if (!input.trim() || isLoading || isTransitioning) return;
-
-        const userMessage: Message = {
-          id: `user-${Date.now()}`,
-          role: "user",
-          content: input.trim(),
-        };
-
-        setPendingUserMessage(userMessage);
-        handleSubmit(e as any);
-      }
+      formUtils.handleEnterKeySubmit(
+        e,
+        input,
+        isLoading,
+        isTransitioning,
+        (event) => {
+          const userMessage = messageConverters.createUserMessage(input);
+          setPendingUserMessage(userMessage);
+          handleSubmit(event);
+        }
+      );
     },
     [input, isLoading, isTransitioning, handleSubmit]
   );
@@ -367,7 +314,13 @@ export function ChatInterface({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!input.trim() || isLoading || isTransitioning}
+                  disabled={
+                    !formUtils.canSubmitMessage(
+                      input,
+                      isLoading,
+                      isTransitioning
+                    )
+                  }
                   className="p-2 rounded-full disabled:text-white/30 text-white transition-colors disabled:opacity-40 bg-white hover:bg-white/90 disabled:hover:bg-white/30 h-8 w-8"
                 >
                   <Send className="h-4 w-4 text-black" />
