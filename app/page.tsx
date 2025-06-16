@@ -1,17 +1,13 @@
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { LandingPage } from "@/components/landing-page";
 
-export default function HomePage() {
-  const router = useRouter();
+export default async function HomePage() {
+  const user = await currentUser();
 
-  useEffect(() => {
-    router.push("/chat");
-  }, [router]);
+  if (user) {
+    redirect("/chat");
+  }
 
-  return (
-    <div className="flex h-screen bg-[#212121] items-center justify-center">
-      <div className="text-white">Loading...</div>
-    </div>
-  );
+  return <LandingPage />;
 }
