@@ -24,27 +24,31 @@ export function ChatSidebar({
   onDeleteChat,
 }: ChatSidebarProps) {
   return (
-    <div className="w-64 bg-[#171717] border-r border-white/10 flex flex-col">
-      <div className="p-3">
+    <div className="w-96 bg-[#171717] border-r border-white/10 flex flex-col h-screen">
+      {/* Fixed header with New Chat button */}
+      <div className="flex-shrink-0 p-4 border-b border-white/10">
         <Button
           onClick={onNewChat}
-          className="w-full bg-transparent border border-white/20 text-white hover:bg-white/10 flex items-center gap-2"
+          className="w-full h-12 bg-transparent border border-white/20 text-white hover:bg-white/10 flex items-center gap-3 text-base font-medium"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-5 w-5" />
           New chat
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
-        <ChatHistory
-          selectedChatId={selectedChatId}
-          availableChats={availableChats}
-          onNewChat={onNewChat}
-          onSelectChat={onSelectChat}
-          onEditChat={onEditChat}
-          onDeleteChat={onDeleteChat}
-        />
-      </ScrollArea>
+      {/* Scrollable chat history */}
+      <div className="flex-1 min-h-0">
+        <ScrollArea className="h-full">
+          <ChatHistory
+            selectedChatId={selectedChatId}
+            availableChats={availableChats}
+            onNewChat={onNewChat}
+            onSelectChat={onSelectChat}
+            onEditChat={onEditChat}
+            onDeleteChat={onDeleteChat}
+          />
+        </ScrollArea>
+      </div>
     </div>
   );
 }

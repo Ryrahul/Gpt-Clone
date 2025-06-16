@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ChatSidebar } from "@/components/chat-sidebar";
 import { ChatInterface } from "@/components/chat-interface";
 import {
@@ -29,7 +28,6 @@ export function ChatLayout({
   const [currentChatData, setCurrentChatData] = useState<ChatItem | null>(
     currentChat
   );
-  const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +137,7 @@ export function ChatLayout({
   };
 
   return (
-    <div className="flex h-screen bg-[#212121]">
+    <div className="flex h-screen bg-[#212121] overflow-hidden">
       {error && (
         <div className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-md z-50">
           {error}
@@ -164,7 +162,7 @@ export function ChatLayout({
         onDeleteChat={handleDeleteChat}
       />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <ChatInterface
           chatId={currentChatId}
           initialMessages={currentChatData?.messages || []}

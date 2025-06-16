@@ -60,6 +60,7 @@ export function ChatInterface({
     initialMessages: [],
     onFinish: () => {
       console.log("onFinish called");
+      console.log(messages);
       setPendingUserMessage(null);
     },
   });

@@ -67,58 +67,63 @@ export function ChatHistory({
   );
 
   return (
-    <div className="flex-1 overflow-y-auto px-2">
-      <div className="space-y-1">
+    <div className="p-4">
+      <div className="space-y-3">
         {chatHistory.map((chat) => (
           <div
             key={chat._id}
-            className={`group flex items-start gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-colors ${
-              selectedChatId === chat._id ? "bg-white/10" : ""
+            className={`group flex items-start gap-4 p-4 rounded-xl hover:bg-white/10 cursor-pointer transition-all duration-200 ${
+              selectedChatId === chat._id
+                ? "bg-white/10 border border-white/20"
+                : "border border-transparent"
             }`}
             onClick={() => handleChatClick(chat._id)}
             onMouseEnter={() => setHoveredChat(chat._id)}
             onMouseLeave={() => setHoveredChat(null)}
           >
-            <MessageSquare className="h-4 w-4 text-white/70 mt-0.5 flex-shrink-0" />
+            <MessageSquare className="h-6 w-6 text-white/70 mt-1 flex-shrink-0" />
 
             <div className="flex-1 min-w-0">
-              <div className="text-white/90 text-sm font-medium truncate mb-1">
+              <div className="text-white/90 text-base font-semibold mb-2 leading-tight line-clamp-2">
                 {chat.title}
               </div>
               {chat.messages.length > 0 && (
-                <div className="text-white/60 text-xs truncate">
+                <div className="text-white/60 text-sm mb-3 leading-relaxed line-clamp-2">
                   {chat.messages[chat.messages.length - 1]?.content?.slice(
                     0,
-                    50
+                    100
                   )}
-                  ...
+                  {chat.messages[chat.messages.length - 1]?.content &&
+                  chat.messages[chat.messages.length - 1]?.content.length > 100
+                    ? "..."
+                    : ""}
                 </div>
               )}
-              <div className="text-white/40 text-xs mt-1">
+              <div className="text-white/40 text-sm font-medium">
                 {formatTimestamp(chat.timestamp)}
               </div>
             </div>
 
             <div
-              className={`flex gap-1 transition-opacity ${
+              className={`flex gap-2 transition-opacity duration-200 ${
                 hoveredChat === chat._id ? "opacity-100" : "opacity-0"
               }`}
             >
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
                 onClick={(e) => handleEditClick(e, chat._id)}
               >
-                <Edit3 className="h-3 w-3" />
+                <Edit3 className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
                 onClick={(e) => handleDeleteClick(e, chat._id)}
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -126,8 +131,12 @@ export function ChatHistory({
 
         {/* Show empty state if no chats */}
         {chatHistory.length === 0 && (
-          <div className="text-white/50 text-sm text-center py-8">
-            No conversations yet
+          <div className="text-white/50 text-lg text-center py-16 px-4">
+            <MessageSquare className="h-12 w-12 mx-auto mb-4 text-white/30" />
+            <p className="font-medium">No conversations yet</p>
+            <p className="text-sm text-white/40 mt-2">
+              Start a new chat to begin
+            </p>
           </div>
         )}
       </div>
