@@ -7,10 +7,13 @@ import { MessageSquare, Edit3, Trash2 } from "lucide-react";
 import type { Message } from "ai";
 
 interface ChatItem {
+  _id: string;
   id: string;
   title: string;
   messages: Message[];
   timestamp: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ChatHistoryProps {
@@ -68,12 +71,12 @@ export function ChatHistory({
       <div className="space-y-1">
         {chatHistory.map((chat) => (
           <div
-            key={chat.id}
+            key={chat._id}
             className={`group flex items-start gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-colors ${
-              selectedChatId === chat.id ? "bg-white/10" : ""
+              selectedChatId === chat._id ? "bg-white/10" : ""
             }`}
-            onClick={() => handleChatClick(chat.id)}
-            onMouseEnter={() => setHoveredChat(chat.id)}
+            onClick={() => handleChatClick(chat._id)}
+            onMouseEnter={() => setHoveredChat(chat._id)}
             onMouseLeave={() => setHoveredChat(null)}
           >
             <MessageSquare className="h-4 w-4 text-white/70 mt-0.5 flex-shrink-0" />
@@ -98,14 +101,14 @@ export function ChatHistory({
 
             <div
               className={`flex gap-1 transition-opacity ${
-                hoveredChat === chat.id ? "opacity-100" : "opacity-0"
+                hoveredChat === chat._id ? "opacity-100" : "opacity-0"
               }`}
             >
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/10"
-                onClick={(e) => handleEditClick(e, chat.id)}
+                onClick={(e) => handleEditClick(e, chat._id)}
               >
                 <Edit3 className="h-3 w-3" />
               </Button>
@@ -113,7 +116,7 @@ export function ChatHistory({
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/10"
-                onClick={(e) => handleDeleteClick(e, chat.id)}
+                onClick={(e) => handleDeleteClick(e, chat._id)}
               >
                 <Trash2 className="h-3 w-3" />
               </Button>

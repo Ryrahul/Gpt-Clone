@@ -20,8 +20,9 @@ import {
 interface ChatInterfaceProps {
   chatId: string | null;
   initialMessages: Message[];
-  onUpdateChat?: (chatId: string, messages: Message[]) => void;
-  onCreateNewChat?: (messages: Message[]) => void;
+  onUpdateChat?: (chatId: string, messages: Message[]) => Promise<void>;
+  onCreateNewChat?: (messages: Message[]) => Promise<any>;
+  isLoading?: boolean;
 }
 
 export function ChatInterface({
@@ -29,6 +30,7 @@ export function ChatInterface({
   initialMessages,
   onUpdateChat,
   onCreateNewChat,
+  isLoading: externalLoading = false,
 }: ChatInterfaceProps) {
   const [hasCreatedChat, setHasCreatedChat] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -85,7 +87,11 @@ export function ChatInterface({
         } else if (!chatId && onCreateNewChat && !hasCreatedChat) {
           setHasCreatedChat(true);
           setIsTransitioning(true);
-          await onCreateNewChat(dbMessages);
+          try {
+            await onCreateNewChat(dbMessages);
+          } finally {
+            setIsTransitioning(false);
+          }
         }
 
         setLastSavedMessageCount(messagesToSave.length);
@@ -132,14 +138,18 @@ export function ChatInterface({
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (!formUtils.canSubmitMessage(input, isLoading, isTransitioning))
-        return;
+      const canSubmit = formUtils.canSubmitMessage(
+        input,
+        isLoading || externalLoading,
+        isTransitioning
+      );
+      if (!canSubmit) return;
 
       const userMessage = messageConverters.createUserMessage(input);
       setPendingUserMessage(userMessage);
       handleSubmit(e);
     },
-    [input, isLoading, isTransitioning, handleSubmit]
+    [input, isLoading, isTransitioning, handleSubmit, externalLoading]
   );
 
   const handleKeyDown = useCallback(
@@ -302,7 +312,7 @@ export function ChatInterface({
                   overflowY: "hidden",
                 }}
                 rows={1}
-                disabled={isLoading || isTransitioning}
+                disabled={isLoading || isTransitioning || externalLoading}
               />
 
               <div className="absolute right-3 bottom-3 flex items-center gap-2">
@@ -317,7 +327,7 @@ export function ChatInterface({
                   disabled={
                     !formUtils.canSubmitMessage(
                       input,
-                      isLoading,
+                      isLoading || externalLoading,
                       isTransitioning
                     )
                   }
