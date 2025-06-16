@@ -16,23 +16,48 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { chats, updateChat, deleteChat, getChat } = useChat();
+  const { chats, updateChat, deleteChat, getChat, loadChats } = useChat();
   const currentChat = getChat(chatId);
 
-  // Load chat data when component mounts or chatId changes
+  // Check if this is a temporary ID from optimistic updates
+  const isTemporaryId =
+    chatId?.startsWith("temp-") || chatId?.startsWith("creating-");
+
   useEffect(() => {
     const loadChat = async () => {
+      // If it's a temporary ID, redirect to new chat
+      if (isTemporaryId) {
+        console.log("Temporary ID detected, redirecting to new chat");
+        router.replace("/chat");
+        return;
+      }
+
       setLoading(true);
       try {
-        // Chat should exist in global state
-        if (!getChat(chatId)) {
-          console.log("Chat not found:", chatId);
-          router.push("/chat");
-          return;
+        let chat = getChat(chatId);
+
+        if (!chat) {
+          console.log("Chat not found in context, fetching from API...");
+          const response = await fetch(`/api/chats/${chatId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.chat) {
+              await loadChats();
+              chat = getChat(chatId);
+            }
+          }
+
+          if (!chat) {
+            console.log("Chat not found, redirecting to /chat");
+            router.replace("/chat");
+            return;
+          }
         }
+
+        console.log("Loaded chat:", chat);
       } catch (error) {
         console.error("Error loading chat:", error);
-        router.push("/chat");
+        router.replace("/chat");
       } finally {
         setLoading(false);
       }
@@ -41,7 +66,7 @@ export default function ChatPage() {
     if (chatId) {
       loadChat();
     }
-  }, [chatId, router, getChat]);
+  }, [chatId, router, getChat, loadChats, isTemporaryId]);
 
   const handleNewChat = () => {
     router.push("/chat");
@@ -57,16 +82,24 @@ export default function ChatPage() {
   };
 
   const handleDeleteChat = async (deleteChatId: string) => {
-    deleteChat(deleteChatId);
-
+    await deleteChat(deleteChatId);
     if (deleteChatId === chatId) {
       router.push("/chat");
     }
   };
 
   const handleUpdateChat = async (updateChatId: string, messages: any[]) => {
-    updateChat(updateChatId, messages);
+    console.log("Updating chat from page:", updateChatId, messages);
+    await updateChat(updateChatId, messages);
   };
+
+  if (isTemporaryId) {
+    return (
+      <div className="flex h-screen bg-[#212121] items-center justify-center">
+        <div className="text-white">Redirecting...</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -86,6 +119,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-[#212121]">
+      {/* Sidebar */}
       <div
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-[260px] bg-[#171717] transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-0",

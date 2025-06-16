@@ -1,3 +1,4 @@
+// ===== UPDATED NewChatPage.tsx =====
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,9 +13,11 @@ import type { Message } from "ai";
 export default function NewChatPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { chats, addChat, deleteChat } = useChat();
+  const [creatingChatId, setCreatingChatId] = useState<string | null>(null);
+  const { chats, loading, deleteChat, createChat } = useChat();
 
   const handleNewChat = () => {
+    setCreatingChatId(null);
     router.push("/chat");
   };
 
@@ -28,27 +31,33 @@ export default function NewChatPage() {
   };
 
   const handleDeleteChat = async (chatId: string) => {
-    deleteChat(chatId);
+    await deleteChat(chatId);
   };
 
   const handleCreateNewChat = async (messages: Message[]) => {
-    // Create new chat with the complete conversation
-    const newChatId = `chat-${Date.now()}`;
-    const newChat = {
-      id: newChatId,
-      title: messages[0]?.content?.slice(0, 30) || "New conversation",
-      messages,
-      timestamp: new Date(),
-    };
+    try {
+      // Set a flag that we're creating a chat
+      const tempId = `creating-${Date.now()}`;
+      setCreatingChatId(tempId);
 
-    // Add to global state first
-    addChat(newChat);
+      // Create chat immediately (don't navigate yet)
+      const newChat = await createChat(messages);
 
-    // Small delay to ensure state is updated before navigation
-    setTimeout(() => {
-      router.push(`/chat/${newChatId}`);
-    }, 100);
+      // Now navigate to the real chat
+      router.push(`/chat/${newChat._id}`);
+    } catch (error) {
+      console.error("Error creating chat:", error);
+      setCreatingChatId(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-[#212121] items-center justify-center">
+        <div className="text-white">Loading chats...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#212121]">
@@ -69,7 +78,6 @@ export default function NewChatPage() {
               New chat
             </Button>
           </div>
-
           <ChatHistory
             selectedChatId={null}
             availableChats={chats}
@@ -78,7 +86,6 @@ export default function NewChatPage() {
             onEditChat={handleEditChat}
             onDeleteChat={handleDeleteChat}
           />
-
           <div className="p-2 border-t border-white/20">
             <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
               <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
@@ -91,7 +98,6 @@ export default function NewChatPage() {
         </div>
       </div>
 
-      {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -99,7 +105,6 @@ export default function NewChatPage() {
         />
       )}
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
         <div className="md:hidden flex items-center justify-between p-4 border-b border-white/10 bg-[#212121]">
           <Button
@@ -114,7 +119,16 @@ export default function NewChatPage() {
           <div className="w-9" />
         </div>
 
-        {/* New Chat Interface */}
+        {/* Show creating overlay when creating chat */}
+        {creatingChatId && (
+          <div className="absolute inset-0 bg-[#212121] bg-opacity-90 flex items-center justify-center z-20">
+            <div className="text-white text-sm flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              Creating chat...
+            </div>
+          </div>
+        )}
+
         <ChatInterface
           chatId={null}
           initialMessages={[]}
