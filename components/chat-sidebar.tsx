@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 import { ChatHistory } from "@/components/chat-history";
 import type { ChatItem } from "@/types/type";
 
@@ -25,8 +26,18 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   return (
     <div className="w-96 bg-[#171717] border-r border-white/10 flex flex-col h-screen">
-      {/* Fixed header with New Chat button */}
+      {/* Fixed header with New Chat button and User Button */}
       <div className="flex-shrink-0 p-4 border-b border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-white font-semibold">Chat History</h2>
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: "w-8 h-8",
+              },
+            }}
+          />
+        </div>
         <Button
           onClick={onNewChat}
           className="w-full h-12 bg-transparent border border-white/20 text-white hover:bg-white/10 flex items-center gap-3 text-base font-medium"

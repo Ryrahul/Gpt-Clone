@@ -32,7 +32,6 @@ export function ChatLayout({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Update URL silently without navigation
   const updateUrlSilently = (newChatId: string | null) => {
     const newUrl = newChatId ? `/chat/${newChatId}` : "/chat";
     window.history.replaceState(null, "", newUrl);
