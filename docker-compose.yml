@@ -1,10 +1,11 @@
+version: "3"
 services:
   app:
-    image: ryrahul7/gpt-clone-app:latest   # ✅ Use pushed image
-    env_file:
-      - .env
+    image: ryrahul7/gpt-clone-app:latest
     container_name: nextjs-app
     restart: always
+    env_file:
+      - .env
     ports:
       - "3001:3001"
     depends_on:

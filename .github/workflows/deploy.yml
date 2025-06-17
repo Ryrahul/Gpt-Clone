@@ -24,7 +24,9 @@ jobs:
 
       - name: Build and Push GPT Clone Image
         run: |
-          docker build --no-cache -t ryrahul7/gpt-clone-app:latest .
+          docker build --no-cache \
+            --build-arg MONGODB_URI=${{ secrets.MONGODB_URI }} \
+            -t ryrahul7/gpt-clone-app:latest .
           docker push ryrahul7/gpt-clone-app:latest
 
       - name: SSH to EC2 and Deploy
@@ -38,4 +40,4 @@ jobs:
             docker compose down
             docker system prune -af
             docker pull ryrahul7/gpt-clone-app:latest
-            docker compose up -d
+            docker compose up -d --remove-orphans
