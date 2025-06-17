@@ -1,7 +1,6 @@
-
 services:
   app:
-    build: .
+    image: ryrahul7/gpt-clone-app:latest   # ✅ Use pushed image
     env_file:
       - .env
     container_name: nextjs-app
@@ -10,7 +9,6 @@ services:
       - "3001:3001"
     depends_on:
       - mongo
- 
 
   mongo:
     image: mongo
