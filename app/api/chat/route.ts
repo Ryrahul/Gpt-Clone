@@ -40,6 +40,8 @@ export async function POST(req: Request) {
       },
       ...messages,
     ];
+    console.log("-------------------------------------");
+    console.log(messagesWithMemory);
 
     const result = streamText({
       model: openai("gpt-4-turbo"),

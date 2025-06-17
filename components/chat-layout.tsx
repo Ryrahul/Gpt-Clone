@@ -52,7 +52,6 @@ export function ChatLayout({
     updateUrlSilently(selectedChatId);
   };
 
-  // Updated to handle attachments
   const handleCreateNewChat = async (
     messages: Message[],
     attachments?: MessageAttachment[]
