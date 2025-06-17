@@ -22,8 +22,20 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker build --no-cache \
-            --build-arg MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+            --build-arg MONGODB_URI=${{ secrets.MONGODB_URI }} \
+            --build-arg OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
+            --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
+            --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }} \
+            --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }} \
+            --build-arg NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL }} \
+            --build-arg NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL }} \
+            --build-arg MEM0_API_KEY=${{ secrets.MEM0_API_KEY }} \
+            --build-arg CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }} \
+            --build-arg CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }} \
+            --build-arg CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }} \
             -t ryrahul7/gpt-clone-app:latest .
+
           docker push ryrahul7/gpt-clone-app:latest
 
       - name: SSH to EC2 and Deploy
@@ -33,20 +45,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            set -e
-
-            cd ~/gpt-clone || exit 1
-
-            echo "Stopping existing containers..."
-            docker compose down || true
-
-            echo "Cleaning up old Docker images and containers..."
-            docker system prune -af || true
-
-            echo "Pulling latest image from Docker Hub..."
+            cd ~/gpt-clone
+            docker compose down
+            docker system prune -af
             docker pull ryrahul7/gpt-clone-app:latest
-
-            echo "Recreating containers..."
             docker compose up -d --remove-orphans
-
-            echo "Deployment finished successfully!"
