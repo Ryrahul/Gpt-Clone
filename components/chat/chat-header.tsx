@@ -2,7 +2,7 @@
 
 import { Brain, Paperclip, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { UploadedFile } from "@/components/file-upload";
+import type { UploadedFile } from "@/components/files/file-upload";
 
 interface ChatHeaderProps {
   showMemoryIndicator: boolean;

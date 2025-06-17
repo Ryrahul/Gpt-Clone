@@ -58,11 +58,9 @@ export function ChatSidebar({
       className="flex flex-col h-full"
       style={{ fontFamily: "Inter", fontWeight: 200 }}
     >
-  
       <div className="flex-shrink-0 p-4">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-          
             <div className="w-8 h-8">
               <img
                 src="/chatgpt-4.svg"
@@ -72,14 +70,13 @@ export function ChatSidebar({
             </div>
           </div>
           <div className="flex items-center gap-1">
-         
             <Button
               onClick={handleToggleCollapse}
               className="hidden md:flex p-1.5 h-8 w-8 bg-transparent hover:bg-white/10 text-white/70 hover:text-white rounded-md"
             >
               <PanelLeftClose className="h-4 w-4" />
             </Button>
-         
+
             <Button
               onClick={() => setIsMobileMenuOpen(false)}
               className="md:hidden p-1.5 h-8 w-8 bg-transparent hover:bg-white/10 text-white/70"
@@ -89,9 +86,7 @@ export function ChatSidebar({
           </div>
         </div>
 
-     
         <div className="space-y-2">
-       
           <Button
             onClick={() => {
               onNewChat();
@@ -105,12 +100,8 @@ export function ChatSidebar({
                 New chat
               </span>
             </div>
-            <span className="text-sm text-white/50 hidden xl:block font-light">
-              Ctrl+Shift+O
-            </span>
           </Button>
 
-      
           <Button
             onClick={() => setIsSearchModalOpen(true)}
             className="w-full h-12 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-4 rounded-lg"
@@ -121,7 +112,6 @@ export function ChatSidebar({
             </span>
           </Button>
 
-      
           <Button
             onClick={() => {
               router.push("/memories");
@@ -135,7 +125,6 @@ export function ChatSidebar({
             </span>
           </Button>
 
-  
           <Button
             onClick={() => handleExternalLink("https://sora.com")}
             className="w-full h-12 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-4 rounded-lg"
@@ -146,7 +135,6 @@ export function ChatSidebar({
             </span>
           </Button>
 
-       
           <Button
             onClick={() => handleExternalLink("https://chat.openai.com/gpts")}
             className="w-full h-12 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-4 rounded-lg"
@@ -158,7 +146,6 @@ export function ChatSidebar({
           </Button>
         </div>
       </div>
-
 
       <div className="flex-1 overflow-hidden">
         <div className="px-4 mb-4">
@@ -186,7 +173,6 @@ export function ChatSidebar({
         </ScrollArea>
       </div>
 
-  
       <div className="flex-shrink-0 p-4 border-t border-white/10">
         <div className="flex items-center gap-3">
           <UserButton

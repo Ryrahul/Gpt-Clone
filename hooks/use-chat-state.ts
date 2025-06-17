@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { UploadedFile } from "@/components/file-upload";
+import type { UploadedFile } from "@/components/files/file-upload";
 
 export function useChatState(chatId: string | null, initialMessages: any[]) {
   const lastSavedLengthRef = useRef<number>(initialMessages.length);

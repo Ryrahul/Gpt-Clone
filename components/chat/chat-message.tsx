@@ -3,7 +3,7 @@
 import type React from "react";
 
 import type { Message } from "ai";
-import { AttachmentDisplay } from "@/components/attachment-display";
+import { AttachmentDisplay } from "@/components/files/attachment-display";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";

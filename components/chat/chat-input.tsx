@@ -4,7 +4,7 @@ import type React from "react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Plus, Mic, Paperclip, Brain } from "lucide-react";
-import { FileUpload, type UploadedFile } from "@/components/file-upload";
+import { FileUpload, type UploadedFile } from "@/components/files/file-upload";
 
 interface ChatInputProps {
   input: string;

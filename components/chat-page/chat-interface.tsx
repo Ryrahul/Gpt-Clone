@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import type { Message } from "ai";
 import type { MessageAttachment } from "@/types/type";
 import { autoResizeTextarea } from "@/lib/utils";
-import type { UploadedFile } from "@/components/file-upload";
+import type { UploadedFile } from "@/components/files/file-upload";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessagesArea } from "@/components/chat/chat-message-area";
@@ -387,7 +387,7 @@ export function ChatInterface({
 
   const handleEditMessage = useCallback(
     (messageId: string, newContent: string) => {
-      // Find the index of the message being edited so that wecan remove msg after it 
+      // Find the index of the message being edited so that wecan remove msg after it
       const messageIndex = messages.findIndex((msg) => msg.id === messageId);
 
       if (messageIndex === -1) return;
