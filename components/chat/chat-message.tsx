@@ -36,7 +36,15 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
                 message.experimental_attachments.length > 0 && (
                   <div className="mb-2 flex flex-row gap-2 flex-wrap">
                     {message.experimental_attachments.map((attachment, idx) => (
-                      <AttachmentDisplay key={idx} attachment={attachment} />
+                      <AttachmentDisplay
+                        key={idx}
+                        attachment={{
+                          name: attachment.name,
+                          contentType: attachment.contentType,
+                          url: attachment.url,
+                          size: (attachment as any).size || 0,
+                        }}
+                      />
                     ))}
                   </div>
                 )}

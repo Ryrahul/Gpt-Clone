@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "next lint"
   },
   "dependencies": {
@@ -32,7 +32,8 @@
     "sonner": "^2.0.5",
     "styled-jsx": "^5.1.7",
     "tailwind-merge": "^3.3.1",
-    "tesseract.js": "^6.0.1"
+    "tesseract.js": "^6.0.1",
+    "tiktoken": "^1.0.21"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

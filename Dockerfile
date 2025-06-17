@@ -23,7 +23,7 @@ RUN pnpm build
 RUN pnpm prune --prod
 
 # Expose the port Next.js serves on
-EXPOSE 3000
+EXPOSE 3001
 
 # Start the app
 CMD ["pnpm", "start"]

@@ -2,8 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import { mem0Service } from "@/lib/mem0";
+import { ModelName, TokenManager } from "@/lib/token-manager";
 
-// Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
@@ -16,10 +16,30 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const messages = body.messages;
-    console.log(body);
+    const model = "gpt-4o" as ModelName;
+    const tokenManager = new TokenManager(model);
+
+    const normalizedMessages = messages.map((msg: any) => ({
+      role: msg.role,
+      content:
+        typeof msg.content === "string"
+          ? msg.content
+          : JSON.stringify(msg.content),
+    }));
+
+    const tokenCheck = tokenManager.checkTokenLimits(normalizedMessages);
+
+    if (!tokenCheck.withinLimits) {
+      console.warn(
+        "Input exceeds token limits. Trimming messages from:",
+        tokenCheck.inputTokens,
+        "tokens"
+      );
+      const trimmed = tokenManager.trimMessagesToFit(normalizedMessages);
+      messages.splice(0, messages.length, ...trimmed);
+    }
 
     const latestUserMessage = messages[messages.length - 1]?.content || "";
-
     const relevantMemories = await mem0Service.getRelevantMemories(
       userId,
       latestUserMessage,
@@ -40,11 +60,9 @@ export async function POST(req: Request) {
       },
       ...messages,
     ];
-    console.log("-------------------------------------");
-    console.log(messagesWithMemory);
 
     const result = streamText({
-      model: openai("gpt-4-turbo"),
+      model: openai(model),
       messages: messagesWithMemory,
       onFinish: async () => {
         try {
