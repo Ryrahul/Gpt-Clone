@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   app:
@@ -8,12 +7,10 @@ services:
     container_name: nextjs-app
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3001"
     depends_on:
       - mongo
-    environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/mydb
+ 
 
   mongo:
     image: mongo

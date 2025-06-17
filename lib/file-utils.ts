@@ -54,3 +54,11 @@ export function formatFileSize(bytes: number): string {
     Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   );
 }
+export function getFileTypeLabel(mimeType: string): string {
+  if (mimeType.startsWith("image/")) return "Image";
+  if (mimeType === "application/pdf") return "PDF";
+  if (mimeType.includes("word")) return "Word Document";
+  if (mimeType === "text/plain") return "Text File";
+  if (mimeType === "text/rtf") return "RTF Document";
+  return "Document";
+}

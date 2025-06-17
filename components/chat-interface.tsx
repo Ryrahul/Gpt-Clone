@@ -9,14 +9,24 @@ import { useChat } from "@ai-sdk/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import type { Message } from "ai";
+import type { MessageAttachment } from "@/types/type";
 import { scrollToBottom, autoResizeTextarea } from "@/lib/utils";
 import { FileUpload, type UploadedFile } from "@/components/file-upload";
+import { AttachmentDisplay } from "@/components/attachment-display";
+import { TypingIndicator } from "@/components/typing-indicator";
 
 interface ChatInterfaceProps {
   chatId: string | null;
-  initialMessages: Message[];
-  onUpdateChat?: (chatId: string, messages: Message[]) => Promise<void>;
-  onCreateNewChat?: (messages: Message[]) => Promise<any>;
+  initialMessages: any[];
+  onUpdateChat?: (
+    chatId: string,
+    messages: Message[],
+    attachments?: MessageAttachment[]
+  ) => Promise<void>;
+  onCreateNewChat?: (
+    messages: Message[],
+    attachments?: MessageAttachment[]
+  ) => Promise<any>;
   isLoading?: boolean;
 }
 
@@ -45,6 +55,22 @@ export function ChatInterface({
     `chat-${chatId || "new"}-${Date.now()}`
   );
 
+  // 🔑 KEY: Transform DB messages to AI SDK format with experimental_attachments
+  const transformedMessages: Message[] = initialMessages.map((msg) => ({
+    id: msg.id,
+    role: msg.role,
+    content: msg.content,
+    createdAt: msg.createdAt,
+    // 🎯 Convert DB attachments to experimental_attachments format
+    experimental_attachments:
+      msg.attachments?.map((attachment: MessageAttachment) => ({
+        name: attachment.name,
+        contentType: attachment.mimeType,
+        size: attachment.size,
+        url: attachment.url, // Cloudinary URL for display
+      })) || [],
+  }));
+
   useEffect(() => {
     if (isLoaded) {
       setHasMounted(true);
@@ -62,12 +88,11 @@ export function ChatInterface({
     error,
   } = useChat({
     api: "/api/chat",
-    initialMessages: initialMessages,
+    initialMessages: transformedMessages,
     id: chatInstanceId.current,
     onFinish: () => {
       console.log("AI response finished");
-      setUploadedFiles([]);
-      setNativeFiles([]);
+      // Don't clear uploadedFiles here - let saveMessages handle it
       setShowFileUpload(false);
       setShowMemoryIndicator(true);
       setTimeout(() => setShowMemoryIndicator(false), 2000);
@@ -109,18 +134,59 @@ export function ChatInterface({
 
       try {
         isSavingRef.current = true;
-        console.log("Saving messages:", messages);
+
+        // 🔑 KEY: Use the uploadedFiles metadata we stored earlier
+        const allAttachments: MessageAttachment[] = [];
+
+        // Get attachments from the most recent user message (if any)
+        if (uploadedFiles.length > 0) {
+          const userMessageAttachments: MessageAttachment[] = uploadedFiles.map(
+            (file, index) => ({
+              id: file.id,
+              url: file.url,
+              name: file.name,
+              type: file.type,
+              mimeType: file.mimeType,
+              size: file.size,
+              width: file.width,
+              height: file.height,
+              pages: file.pages,
+              provider: file.provider,
+            })
+          );
+          allAttachments.push(...userMessageAttachments);
+        }
+
+        console.log(
+          "Saving messages:",
+          messages.length,
+          "total attachments:",
+          allAttachments.length
+        );
 
         if (chatId && onUpdateChat) {
-          await onUpdateChat(chatId, messages);
+          await onUpdateChat(
+            chatId,
+            messages,
+            allAttachments.length > 0 ? allAttachments : undefined
+          );
         } else if (!chatId && onCreateNewChat) {
-          const newChat = await onCreateNewChat(messages);
+          const newChat = await onCreateNewChat(
+            messages,
+            allAttachments.length > 0 ? allAttachments : undefined
+          );
           if (newChat && newChat._id) {
             chatIdRef.current = newChat._id;
           }
         }
 
         lastSavedLengthRef.current = messages.length;
+
+        // Clear uploaded files after successful save
+        if (allAttachments.length > 0) {
+          setUploadedFiles([]);
+          setNativeFiles([]);
+        }
       } catch (error) {
         console.error("Error saving messages:", error);
         if (error instanceof Error && error.message.includes("Unauthorized")) {
@@ -141,11 +207,12 @@ export function ChatInterface({
     router,
     isSignedIn,
     hasMounted,
+    uploadedFiles,
   ]);
 
   useEffect(() => {
     console.log("Chat changed:", chatId);
-    console.log("Initial messages:", initialMessages);
+    console.log("Initial messages:", initialMessages.length);
 
     chatIdRef.current = chatId;
     lastSavedLengthRef.current = initialMessages.length;
@@ -153,7 +220,8 @@ export function ChatInterface({
 
     chatInstanceId.current = `chat-${chatId || "new"}-${Date.now()}`;
 
-    setMessages(initialMessages);
+    // Use transformed messages
+    setMessages(transformedMessages);
     setUploadedFiles([]);
     setNativeFiles([]);
     setShowFileUpload(false);
@@ -181,6 +249,7 @@ export function ChatInterface({
       nativeFiles.forEach((file) => dataTransfer.items.add(file));
       const fileList = dataTransfer.files;
 
+      // 🎯 Simple: Just use experimental_attachments as normal
       const options =
         fileList.length > 0 ? { experimental_attachments: fileList } : {};
       handleSubmit(e, options);
@@ -193,8 +262,6 @@ export function ChatInterface({
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         if (input.trim() && !isLoading && !externalLoading) {
-          console.log("Submitting via Enter with files:", nativeFiles.length);
-
           const syntheticEvent = {
             preventDefault: () => {},
             currentTarget: e.currentTarget.closest("form"),
@@ -345,26 +412,18 @@ export function ChatInterface({
                       {message.role === "user" ? (
                         <div className="flex justify-end mb-4">
                           <div className="max-w-[70%]">
-                            {uploadedFiles.length > 0 &&
-                              index === messages.length - 1 && (
-                                <div className="mb-2 space-y-2">
-                                  {uploadedFiles.map((file, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="flex items-center gap-2 text-sm text-blue-400"
-                                    >
-                                      {file.mimeType.startsWith("image/") ? (
-                                        <img
-                                          src={file.url || "/placeholder.svg"}
-                                          alt={file.name}
-                                          className="w-16 h-16 rounded object-cover"
-                                        />
-                                      ) : (
-                                        <span>📎</span>
-                                      )}
-                                      <span>{file.name}</span>
-                                    </div>
-                                  ))}
+                            {/* 🎯 Use AttachmentDisplay component for all file types */}
+                            {message.experimental_attachments &&
+                              message.experimental_attachments.length > 0 && (
+                                <div className="mb-2 flex flex-row gap-2 flex-wrap">
+                                  {message.experimental_attachments.map(
+                                    (attachment, idx) => (
+                                      <AttachmentDisplay
+                                        key={idx}
+                                        attachment={attachment}
+                                      />
+                                    )
+                                  )}
                                 </div>
                               )}
                             <div className="bg-[#2f2f2f] rounded-3xl px-5 py-3 text-white">
@@ -384,19 +443,14 @@ export function ChatInterface({
                   </div>
                 ))}
 
+                {/* 🎯 Beautiful loading indicator with bouncing dots */}
                 {isLoading && (
                   <div className="w-full py-6 px-4">
                     <div className="max-w-3xl mx-auto">
                       <div className="flex gap-4 mb-4">
                         <div className="flex-shrink-0">{AssistantIcon}</div>
-                        <div className="flex-1 text-white">
-                          <div className="result-streaming">
-                            <span className="result-thinking">
-                              <span></span>
-                              <span></span>
-                              <span></span>
-                            </span>
-                          </div>
+                        <div className="flex-1">
+                          <TypingIndicator />
                         </div>
                       </div>
                     </div>

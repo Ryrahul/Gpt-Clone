@@ -1,32 +1,29 @@
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
+# Use official Node.js alpine image
+FROM node:20-alpine
+
+# Set working directory
 WORKDIR /app
 
-# Install pnpm
+# Install pnpm globally
 RUN npm install -g pnpm
 
-COPY pnpm-lock.yaml package.json ./
+# Copy lock and manifest first for caching
+COPY package.json pnpm-lock.yaml ./
+
+# Install all dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
 
-FROM node:20-alpine AS builder
-WORKDIR /app
-RUN npm install -g pnpm
-
-COPY --from=deps /app/node_modules ./node_modules
+# Copy the rest of your source code
 COPY . .
 
+# Build the Next.js app
 RUN pnpm build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
-RUN npm install -g pnpm
+# Remove devDependencies after build to reduce image size
+RUN pnpm prune --prod
 
-ENV NODE_ENV=production
-
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
+# Expose the port Next.js serves on
 EXPOSE 3000
+
+# Start the app
 CMD ["pnpm", "start"]
