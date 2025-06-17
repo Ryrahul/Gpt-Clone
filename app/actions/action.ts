@@ -7,6 +7,7 @@ import Chat from "@/models/Chat";
 import Message from "@/models/Message";
 import type { Message as AIMessage } from "ai";
 import type { ChatItem } from "@/types/type";
+import type { MessageAttachment } from "@/types/type";
 
 export async function getChats(): Promise<ChatItem[]> {
   try {
@@ -15,7 +16,6 @@ export async function getChats(): Promise<ChatItem[]> {
     if (!user) {
       throw new Error("Unauthorized");
     }
-    console.log(await user?.id);
 
     await dbConnect();
 
@@ -48,6 +48,7 @@ export async function getChats(): Promise<ChatItem[]> {
           id: msg._id.toString(),
           role: msg.role,
           content: msg.content,
+          attachments: msg.attachments || [], // Always provide empty array if no attachments
           createdAt: msg.createdAt || new Date(),
         })),
       };
@@ -91,6 +92,7 @@ export async function getChat(chatId: string): Promise<ChatItem | null> {
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
+        attachments: msg.attachments || [], // Always provide empty array if no attachments
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -100,7 +102,11 @@ export async function getChat(chatId: string): Promise<ChatItem | null> {
   }
 }
 
-export async function createChat(messages: AIMessage[]): Promise<ChatItem> {
+// Updated to handle optional attachments
+export async function createChat(
+  messages: AIMessage[],
+  attachments?: MessageAttachment[]
+): Promise<ChatItem> {
   try {
     const user = await currentUser();
 
@@ -121,11 +127,23 @@ export async function createChat(messages: AIMessage[]): Promise<ChatItem> {
     }
 
     const messageIds = [];
-    for (const msg of messages) {
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+
+      // Only add attachments if they exist and this is the last user message
+      const messageAttachments =
+        attachments &&
+        attachments.length > 0 &&
+        msg.role === "user" &&
+        i === messages.length - 2
+          ? attachments
+          : [];
+
       const message = await Message.create({
         chat: chat._id,
         role: msg.role,
         content: msg.content,
+        attachments: messageAttachments, // Will be empty array if no attachments
       });
       messageIds.push(message._id);
     }
@@ -158,6 +176,7 @@ export async function createChat(messages: AIMessage[]): Promise<ChatItem> {
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
+        attachments: msg.attachments || [], // Always provide empty array
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -170,9 +189,11 @@ export async function createChat(messages: AIMessage[]): Promise<ChatItem> {
   }
 }
 
+// Updated to handle optional attachments
 export async function updateChat(
   chatId: string,
-  messages: AIMessage[]
+  messages: AIMessage[],
+  attachments?: MessageAttachment[] // Optional parameter
 ): Promise<ChatItem> {
   try {
     const user = await currentUser();
@@ -194,11 +215,23 @@ export async function updateChat(
 
     // Create new messages
     const messageIds = [];
-    for (const msg of messages) {
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+
+      // Only add attachments if they exist and this is the second-to-last message (user message)
+      const messageAttachments =
+        attachments &&
+        attachments.length > 0 &&
+        msg.role === "user" &&
+        i === messages.length - 2
+          ? attachments
+          : [];
+
       const message = await Message.create({
         chat: chatId,
         role: msg.role,
         content: msg.content,
+        attachments: messageAttachments, // Will be empty array if no attachments
       });
       messageIds.push(message._id);
     }
@@ -233,6 +266,7 @@ export async function updateChat(
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
+        attachments: msg.attachments || [], // Always provide empty array
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -246,6 +280,7 @@ export async function updateChat(
   }
 }
 
+// Existing functions remain the same
 export async function deleteChat(chatId: string): Promise<void> {
   try {
     const user = await currentUser();
@@ -303,5 +338,172 @@ export async function updateChatTitle(
   } catch (error) {
     console.error("Error updating chat title:", error);
     throw error;
+  }
+}
+
+// Helper function to check if a chat has attachments
+export async function chatHasAttachments(chatId: string): Promise<boolean> {
+  try {
+    const user = await currentUser();
+
+    if (!user) {
+      return false;
+    }
+
+    await dbConnect();
+
+    const messageWithAttachments = await Message.findOne({
+      chat: chatId,
+      "attachments.0": { $exists: true }, // Has at least one attachment
+    }).populate({
+      path: "chat",
+      match: { userId: user.id },
+    });
+
+    return (
+      messageWithAttachments !== null && messageWithAttachments.chat !== null
+    );
+  } catch (error) {
+    console.error("Error checking chat attachments:", error);
+    return false;
+  }
+}
+
+// Updated search function with better error handling
+export async function searchChatsByAttachment(
+  filename: string
+): Promise<ChatItem[]> {
+  try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    if (!filename || filename.trim() === "") {
+      return [];
+    }
+
+    await dbConnect();
+
+    // Find messages with matching attachment names
+    const messages = await Message.find({
+      "attachments.name": { $regex: filename.trim(), $options: "i" },
+    }).populate("chat");
+
+    // Get unique chat IDs that belong to the user
+    const chatIds = [
+      ...new Set(
+        messages
+          .filter((msg: any) => msg.chat && msg.chat.userId === user.id)
+          .map((msg: any) => msg.chat._id.toString())
+      ),
+    ];
+
+    if (chatIds.length === 0) {
+      return [];
+    }
+
+    // Get the full chats with messages
+    const chats = await Chat.find({
+      _id: { $in: chatIds },
+      userId: user.id,
+    })
+      .populate({
+        path: "messages",
+        model: "Message",
+        options: { sort: { createdAt: 1 } },
+      })
+      .sort({ updatedAt: -1 })
+      .lean()
+      .exec();
+
+    return chats.map((chat) => {
+      const chatData = chat as any;
+      return {
+        _id: chatData._id.toString(),
+        id: chatData._id.toString(),
+        title: chatData.title || "Untitled Chat",
+        timestamp: new Date(chatData.updatedAt),
+        createdAt:
+          chatData.createdAt?.toISOString() || new Date().toISOString(),
+        updatedAt:
+          chatData.updatedAt?.toISOString() || new Date().toISOString(),
+        messages: (chatData.messages || []).map((msg: any) => ({
+          id: msg._id.toString(),
+          role: msg.role,
+          content: msg.content,
+          attachments: msg.attachments || [], // Always provide empty array
+          createdAt: msg.createdAt || new Date(),
+        })),
+      };
+    });
+  } catch (error) {
+    console.error("Error searching chats by attachment:", error);
+    return [];
+  }
+}
+
+// Updated stats function with better error handling
+export async function getAttachmentStats(): Promise<{
+  totalAttachments: number;
+  imageCount: number;
+  documentCount: number;
+  totalSize: number;
+}> {
+  try {
+    const user = await currentUser();
+
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
+    await dbConnect();
+
+    // Get all messages with attachments for this user
+    const messages = await Message.find({
+      "attachments.0": { $exists: true }, // Has at least one attachment
+    }).populate({
+      path: "chat",
+      match: { userId: user.id },
+    });
+
+    // Filter out messages where chat is null (user doesn't own the chat)
+    const userMessages = messages.filter((msg: any) => msg.chat !== null);
+
+    let totalAttachments = 0;
+    let imageCount = 0;
+    let documentCount = 0;
+    let totalSize = 0;
+
+    userMessages.forEach((msg: any) => {
+      if (msg.attachments && Array.isArray(msg.attachments)) {
+        msg.attachments.forEach((attachment: any) => {
+          totalAttachments++;
+          totalSize += attachment.size || 0;
+
+          if (attachment.mimeType?.startsWith("image/")) {
+            imageCount++;
+          } else {
+            documentCount++;
+          }
+        });
+      }
+    });
+
+    return {
+      totalAttachments,
+      imageCount,
+      documentCount,
+      totalSize,
+    };
+  } catch (error) {
+    console.error("Error getting attachment stats:", error);
+    return {
+      totalAttachments: 0,
+      imageCount: 0,
+      documentCount: 0,
+      totalSize: 0,
+    };
   }
 }

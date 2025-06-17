@@ -14,14 +14,16 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const { messages } = await req.json();
+    const body = await req.json();
+    const messages = body.messages;
+    console.log(body);
 
     const latestUserMessage = messages[messages.length - 1]?.content || "";
 
     const relevantMemories = await mem0Service.getRelevantMemories(
       userId,
       latestUserMessage,
-      3 
+      3
     );
 
     let memoryContext = "";
