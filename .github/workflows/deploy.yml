@@ -24,10 +24,10 @@ jobs:
 
       - name: Build and Push GPT Clone Image
         run: |
-          docker build --no-cache \
+          docker buildx build --no-cache \
             --build-arg MONGODB_URI=${{ secrets.MONGODB_URI }} \
-            -t ryrahul7/gpt-clone-app:latest .
-          docker push ryrahul7/gpt-clone-app:latest
+            -t ryrahul7/gpt-clone-app:latest \
+            --push .
 
       - name: SSH to EC2 and Deploy
         uses: appleboy/ssh-action@master
