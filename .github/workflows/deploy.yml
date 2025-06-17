@@ -18,7 +18,7 @@ jobs:
 
       - name: Create and Use Docker Builder
         run: |
-          docker buildx create --name gpt-builder --use
+          docker buildx create --name gpt-builder --use || true
           docker buildx inspect gpt-builder --bootstrap
 
       - name: Log in to Docker Hub
@@ -29,10 +29,9 @@ jobs:
 
       - name: Build and Push GPT Clone Image
         run: |
-          docker buildx build --no-cache \
+          docker buildx build --no-cache --push \
             --build-arg MONGODB_URI=${{ secrets.MONGODB_URI }} \
-            -t ryrahul7/gpt-clone-app:latest \
-            --push .
+            -t ryrahul7/gpt-clone-app:latest .
 
       - name: SSH to EC2 and Deploy
         uses: appleboy/ssh-action@master
