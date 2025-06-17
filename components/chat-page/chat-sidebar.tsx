@@ -11,8 +11,8 @@ import {
   Menu,
   PanelLeftClose,
   Edit3,
+  Shield,
 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { ChatHistory } from "@/components/chat-page/chat-history";
 import { SearchModal } from "@/components/search-modal";
@@ -174,20 +174,22 @@ export function ChatSidebar({
       </div>
 
       <div className="flex-shrink-0 p-4 border-t border-white/10">
-        <div className="flex items-center gap-3">
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: "w-8 h-8",
-              },
-            }}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="text-[#FEFEFE] text-[17px] leading-[24px] font-light truncate">
-              User Profile
+        <Button
+          onClick={() => handleExternalLink("https://chatgpt.com/#pricing")}
+          className="w-full bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-3 py-3 rounded-lg border-0"
+        >
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-white/70" />
+            <div className="flex flex-col items-start">
+              <span className="text-[#FEFEFE] text-[15px] leading-[20px] font-medium">
+                Upgrade plan
+              </span>
+              <span className="text-white/60 text-[13px] leading-[16px] font-light">
+                More access to the best models
+              </span>
             </div>
           </div>
-        </div>
+        </Button>
       </div>
     </div>
   );

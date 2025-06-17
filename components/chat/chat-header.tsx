@@ -2,6 +2,7 @@
 
 import { Brain, Paperclip, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserButton } from "@clerk/nextjs";
 import type { UploadedFile } from "@/components/files/file-upload";
 
 interface ChatHeaderProps {
@@ -56,6 +57,15 @@ export function ChatHeader({
             </span>
           </div>
         )}
+
+        {/* User Profile - moved from sidebar */}
+        <UserButton
+          appearance={{
+            elements: {
+              avatarBox: "w-8 h-8",
+            },
+          }}
+        />
       </div>
     </div>
   );
