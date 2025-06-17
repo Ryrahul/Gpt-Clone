@@ -91,7 +91,6 @@ class Mem0Service {
 
     try {
       await this.client.delete(memoryId);
-      console.log("Memory deleted successfully");
     } catch (error) {
       console.error("Error deleting memory:", error);
     }

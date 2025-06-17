@@ -13,7 +13,6 @@ export async function DELETE(
     }
 
     const { memoryId } = await params;
-    console.log(memoryId);
 
     if (!memoryId) {
       return new Response("Memory ID is required", { status: 400 });

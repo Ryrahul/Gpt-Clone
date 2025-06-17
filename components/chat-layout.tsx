@@ -11,7 +11,7 @@ import {
 } from "@/app/actions/action";
 import type { Message } from "ai";
 import type { ChatItem } from "@/types/type";
-import type { MessageAttachment } from "@/types/type"
+import type { MessageAttachment } from "@/types/type";
 
 interface ChatLayoutProps {
   chats: ChatItem[];
@@ -142,7 +142,7 @@ export function ChatLayout({
   return (
     <div className="flex h-screen bg-[#212121] overflow-hidden">
       {error && (
-        <div className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-md z-50">
+        <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-md z-50 text-sm max-w-xs sm:max-w-none">
           {error}
           <button
             onClick={() => setError(null)}

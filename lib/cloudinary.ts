@@ -44,7 +44,6 @@ export async function uploadToCloudinary(
             console.error("Cloudinary upload error:", error);
             reject(error);
           } else if (result) {
-            console.log("File uploaded to Cloudinary:", result.public_id);
             const uploadResult: CloudinaryUploadResult = {
               public_id: result.public_id,
               secure_url: result.secure_url,
@@ -69,7 +68,6 @@ export async function uploadToCloudinary(
 export async function deleteFromCloudinary(publicId: string) {
   try {
     const result = await cloudinary.uploader.destroy(publicId);
-    console.log("File deleted from Cloudinary:", publicId);
     return result;
   } catch (error) {
     console.error("Error deleting from Cloudinary:", error);

@@ -85,7 +85,6 @@ export function ChatInterface({
     initialMessages: cleanMessagesForAI,
     id: chatInstanceId.current,
     onFinish: (message) => {
-      console.log("AI response finished");
       setShowFileUpload(false);
       setPendingFiles([]);
 
@@ -200,12 +199,7 @@ export function ChatInterface({
           allAttachments.push(...userMessageAttachments);
         }
 
-        console.log(
-          "Saving messages:",
-          messages.length,
-          "total attachments:",
-          allAttachments.length
-        );
+    
 
         // Handle existing chat updates
         if (chatId && onUpdateChat) {
@@ -366,8 +360,7 @@ export function ChatInterface({
    * - Avoiding race conditions in async save operations
    */
   useEffect(() => {
-    console.log("Chat changed:", chatId);
-    console.log("Initial messages:", initialMessages.length);
+   
 
     // Update refs to match new chat context
     chatIdRef.current = chatId;
@@ -409,7 +402,6 @@ export function ChatInterface({
       e.preventDefault();
       if (!input.trim() || isLoading || externalLoading) return;
 
-      console.log("Submitting with pending files:", pendingFiles.length);
 
       if (pendingFiles.length > 0) {
         const dataTransfer = new DataTransfer();
@@ -464,7 +456,6 @@ export function ChatInterface({
   const handleFileUploaded = (uploadedFile: UploadedFile, nativeFile: File) => {
     setUploadedFiles((prev) => [...prev, uploadedFile]);
     setPendingFiles((prev) => [...prev, nativeFile]);
-    console.log("File uploaded:", uploadedFile.name, "to", uploadedFile.url);
   };
 
   const handleFileRemoved = (fileId: string) => {
@@ -476,16 +467,12 @@ export function ChatInterface({
   };
 
   useEffect(() => {
-    console.log("Display messages updated:", displayMessages.length);
     displayMessages.forEach((msg, idx) => {
       if (
         msg.experimental_attachments &&
         msg.experimental_attachments.length > 0
       ) {
-        console.log(
-          `Message ${idx} has ${msg.experimental_attachments.length} attachments:`,
-          msg.experimental_attachments
-        );
+      
       }
     });
   }, [displayMessages]);

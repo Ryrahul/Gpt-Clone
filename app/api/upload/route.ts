@@ -2,7 +2,6 @@ import { auth } from "@clerk/nextjs/server";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { validateFile } from "@/lib/file-utils";
 
-// Configure the API route to handle larger payloads
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -14,7 +13,6 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    // Parse form data with streaming to handle large files
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -22,27 +20,20 @@ export async function POST(req: Request) {
       return new Response("No file provided", { status: 400 });
     }
 
-    console.log(
-      `Received file: ${file.name} (${file.type}, ${file.size} bytes)`
-    );
+ 
 
-    // Validate file size before processing
     if (file.size > 50 * 1024 * 1024) {
-      // 50MB limit
       return new Response("File too large. Maximum size is 50MB.", {
         status: 413,
       });
     }
 
-    // Validate file type
     const validation = validateFile(file);
     if (!validation.isValid) {
       return new Response(validation.error, { status: 400 });
     }
 
-    console.log(`Uploading file: ${file.name} to Cloudinary...`);
 
-    // Upload to Cloudinary with optimized settings
     const result = await uploadToCloudinary(file, `user-${userId}`);
 
     const uploadedFile = {
@@ -58,7 +49,6 @@ export async function POST(req: Request) {
       pages: result.pages,
     };
 
-    console.log("File upload successful:", uploadedFile.id);
 
     return Response.json({
       success: true,
@@ -67,7 +57,6 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Error uploading file:", error);
 
-    // Handle specific error types
     if (error instanceof Error) {
       if (
         error.message.includes("File too large") ||
