@@ -29,6 +29,7 @@ interface ChatInterfaceProps {
     attachments?: MessageAttachment[]
   ) => Promise<any>;
   isLoading?: boolean;
+  isCollapsed?: boolean; 
 }
 
 export function ChatInterface({
@@ -37,6 +38,7 @@ export function ChatInterface({
   onUpdateChat,
   onCreateNewChat,
   isLoading: externalLoading = false,
+  isCollapsed = false, 
 }: ChatInterfaceProps) {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
@@ -509,6 +511,7 @@ export function ChatInterface({
       <ChatHeader
         showMemoryIndicator={showMemoryIndicator}
         uploadedFiles={uploadedFiles}
+        isCollapsed={isCollapsed}
       />
 
       <ChatMessagesArea

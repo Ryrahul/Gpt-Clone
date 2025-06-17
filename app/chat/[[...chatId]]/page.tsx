@@ -1,5 +1,5 @@
 import { getChats, getChat } from "@/app/actions/action";
-import { ChatLayout } from "@/components/chat-layout";
+import { ChatLayout } from "@/components/chat-page/chat-layout";
 
 interface ChatPageProps {
   params: Promise<{

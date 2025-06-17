@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChatSidebar } from "@/components/chat-sidebar";
-import { ChatInterface } from "@/components/chat-interface";
+import { ChatSidebar } from "@/components/chat-page/chat-sidebar";
+import { ChatInterface } from "@/components/chat-page/chat-interface";
 import {
   createChat,
   updateChat,
@@ -29,6 +29,7 @@ export function ChatLayout({
   const [currentChatData, setCurrentChatData] = useState<ChatItem | null>(
     currentChat
   );
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +140,10 @@ export function ChatLayout({
     }
   };
 
+  const handleToggleCollapse = (collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+  };
+
   return (
     <div className="flex h-screen bg-[#212121] overflow-hidden">
       {error && (
@@ -163,15 +168,24 @@ export function ChatLayout({
         onSelectChat={handleSelectChat}
         onEditChat={handleEditChat}
         onDeleteChat={handleDeleteChat}
+        onToggleCollapse={handleToggleCollapse}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div
+        className={`flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out ${
+          isCollapsed ? "ml-0" : ""
+        }`}
+        style={{
+          marginLeft: isCollapsed ? "0" : "0", 
+        }}
+      >
         <ChatInterface
           chatId={currentChatId}
           initialMessages={currentChatData?.messages || []}
           onUpdateChat={handleUpdateChat}
           onCreateNewChat={handleCreateNewChat}
           isLoading={isLoading}
+          isCollapsed={isCollapsed}
         />
       </div>
     </div>
