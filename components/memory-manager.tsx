@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, Trash2, RefreshCw, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
-// Use a different name to avoid conflict with mem0ai's Memory type
 interface UserMemory {
   id?: string;
   _id?: string;

@@ -6,7 +6,6 @@ import { mem0Service } from "@/lib/mem0";
 async function getMemories(userId: string) {
   try {
     const memories = await mem0Service.getAllUserMemories(userId);
-    // Transform the mem0ai Memory type to our UserMemory type
     return (memories || []).map((memory: any) => ({
       id: memory.id,
       _id: memory._id,

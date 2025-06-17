@@ -92,7 +92,6 @@ export function AttachmentDisplay({
   };
 
   if (isImage) {
-    // For images, show inline
     return (
       <div className={className}>
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
@@ -114,7 +113,6 @@ export function AttachmentDisplay({
     );
   }
 
-  // For documents, show as cards
   return (
     <Card className={`w-40 mb-3 ${className}`}>
       <CardContent className="p-3">

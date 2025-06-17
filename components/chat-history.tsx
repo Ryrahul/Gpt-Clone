@@ -61,7 +61,6 @@ export function ChatHistory({
     onDeleteChat(chatId);
   };
 
-  // Convert chats object to array and sort by timestamp
   const chatHistory = Object.values(availableChats).sort(
     (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
   );
@@ -129,7 +128,6 @@ export function ChatHistory({
           </div>
         ))}
 
-        {/* Show empty state if no chats */}
         {chatHistory.length === 0 && (
           <div className="text-white/50 text-lg text-center py-16 px-4">
             <MessageSquare className="h-12 w-12 mx-auto mb-4 text-white/30" />

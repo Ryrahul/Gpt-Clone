@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 export interface UploadedFile {
   id: string;
-  url: string; // Cloudinary URL
+  url: string; 
   name: string;
   size: number;
   type: string;
@@ -19,7 +19,7 @@ export interface UploadedFile {
   width?: number;
   height?: number;
   pages?: number;
-  file: File; // Native File object for AI SDK
+  file: File;
 }
 
 interface FileUploadProps {
@@ -80,10 +80,9 @@ export function FileUpload({
       const result = await response.json();
 
       if (result.success) {
-        // Create the uploaded file object with native File reference
         const uploadedFile: UploadedFile = {
           ...result.file,
-          file: file, // Keep reference to native File for AI SDK
+          file: file, 
         };
 
         onFileUploaded(uploadedFile, file);
@@ -195,7 +194,6 @@ export function FileUpload({
         </div>
       </div>
 
-      {/* Uploaded Files */}
       {uploadedFiles.length > 0 && (
         <div className="space-y-2">
           <p className="text-white/70 text-sm font-medium">Attached Files:</p>

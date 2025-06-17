@@ -11,10 +11,10 @@ import { scrollToBottom, autoResizeTextarea } from "@/lib/utils";
 import type { UploadedFile } from "@/components/file-upload";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatInput } from "@/components/chat/chat-input";
+import { ChatMessagesArea } from "@/components/chat/chat-message-area";
 import { useChatState } from "@/hooks/use-chat-state";
-import { useMessageDisplay } from "@/hooks/use-message-display";
 import { useMessageTransformer } from "@/hooks/use-message-transformer";
-import { ChatMessagesArea } from "./chat/chat-message-area";
+import { useMessageDisplay } from "@/hooks/use-message-display";
 
 interface ChatInterfaceProps {
   chatId: string | null;
@@ -130,21 +130,58 @@ export function ChatInterface({
     setHasRestoredMessage,
   ]);
 
+  /**
+   * SAVE MESSAGES useEffect - Complex message persistence logic
+   *
+   * WHY WE USE THIS APPROACH:
+   * This useEffect handles saving chat messages to the database after AI responses complete.
+   * We're forced to use this pattern due to limitations in the AI SDK's useChat hook.
+   *
+   * BETTER APPROACH WOULD BE:
+   * Ideally, we'd save messages directly in the useChat's onFinish callback, which would be
+   * cleaner and more straightforward. However, this doesn't work because:
+   * 1. onFinish doesn't contain the latest complete message state (missing last 2 messages)
+   * 2. onFinish only provides the assistant's response message, not the full conversation
+   * 3. Attempting to modify other state within onFinish causes weird behavior and state conflicts
+   * 4. The timing of onFinish vs state updates creates race conditions
+   *
+   * CURRENT APPROACH EXPLANATION:
+   * - We watch the messages array and trigger saves when it changes
+   * - Multiple guards prevent unnecessary saves and race conditions
+   * - We only save after AI responses complete (not after user messages)
+   * - Complex attachment handling merges current session files with database files
+   * - Refs are used to prevent stale closure issues in the async function
+   *
+   * TRADE-OFFS:
+   * ✅ Reliable message persistence
+   * ✅ Handles attachments correctly
+   * ✅ Prevents duplicate saves
+   * ❌ Complex logic that's hard to follow
+   * ❌ Multiple useEffect dependencies
+   * ❌ Potential for race conditions if not carefully managed
+   */
   useEffect(() => {
     if (!isSignedIn || !hasMounted) return;
 
     const saveMessages = async () => {
+      // Guard: Prevent concurrent saves
       if (isSavingRef.current || chatIdRef.current !== chatId) return;
+
+      // Guard: Only save if we have new messages
       if (messages.length <= lastSavedLengthRef.current) return;
+
+      // Guard: Don't save immediately after user messages (wait for AI response)
       if (messages.length > 0 && messages[messages.length - 1]?.role === "user")
         return;
+
+      // Guard: Don't save while AI is still responding
       if (isLoading) return;
 
       try {
         isSavingRef.current = true;
 
+        // Process uploaded files into attachment format
         const allAttachments: MessageAttachment[] = [];
-
         if (uploadedFiles.length > 0) {
           const userMessageAttachments: MessageAttachment[] = uploadedFiles.map(
             (file, index) => ({
@@ -170,8 +207,10 @@ export function ChatInterface({
           allAttachments.length
         );
 
+        // Handle existing chat updates
         if (chatId && onUpdateChat) {
           const messagesWithAttachments = messages.map((msg) => {
+            // Check if message has attachments from current session
             if (
               msg.experimental_attachments &&
               msg.experimental_attachments.length > 0
@@ -187,6 +226,7 @@ export function ChatInterface({
               };
             }
 
+            // Check if message should have attachments from database
             const originalMsg = transformedMessages.find(
               (orig) => orig.id === msg.id
             );
@@ -216,7 +256,9 @@ export function ChatInterface({
             messagesWithAttachments,
             allAttachments.length > 0 ? allAttachments : undefined
           );
-        } else if (!chatId && onCreateNewChat) {
+        }
+        // Handle new chat creation
+        else if (!chatId && onCreateNewChat) {
           const messagesWithAttachments = messages.map((msg) => {
             if (
               msg.experimental_attachments &&
@@ -266,8 +308,10 @@ export function ChatInterface({
           }
         }
 
+        // Update tracking variables
         lastSavedLengthRef.current = messages.length;
 
+        // Clean up uploaded files after successful save
         if (allAttachments.length > 0) {
           setUploadedFiles([]);
         }
@@ -294,17 +338,49 @@ export function ChatInterface({
     uploadedFiles,
   ]);
 
+  /**
+   * CHAT INITIALIZATION useEffect - Handles chat switching and state reset
+   *
+   * WHY WE NEED THIS:
+   * This useEffect runs when the user switches between different chats or creates a new chat.
+   * It's essential for maintaining proper state isolation between different conversations.
+   *
+   * WHAT IT DOES:
+   * 1. Resets all refs to match the new chat context
+   * 2. Generates a new unique chat instance ID for the AI SDK
+   * 3. Reinitializes the useChat hook with clean messages (no attachments)
+   * 4. Clears file upload state to prevent cross-chat contamination
+   * 5. Resets UI state like file upload visibility
+   *
+   * WHY NOT A SIMPLER APPROACH:
+   * We can't just update individual pieces of state because:
+   * - The useChat hook needs to be completely reinitialized with new messages
+   * - File state must be cleared to prevent files from one chat appearing in another
+   * - Refs need to be updated to prevent stale references in async operations
+   * - The chat instance ID must be unique to prevent AI SDK conflicts
+   *
+   * CRITICAL FOR:
+   * - Preventing message leakage between chats
+   * - Ensuring file uploads don't persist across chat switches
+   * - Maintaining proper save state tracking
+   * - Avoiding race conditions in async save operations
+   */
   useEffect(() => {
     console.log("Chat changed:", chatId);
     console.log("Initial messages:", initialMessages.length);
 
+    // Update refs to match new chat context
     chatIdRef.current = chatId;
     lastSavedLengthRef.current = initialMessages.length;
     isSavingRef.current = false;
 
+    // Generate unique instance ID to prevent AI SDK conflicts
     chatInstanceId.current = `chat-${chatId || "new"}-${Date.now()}`;
 
+    // Reinitialize useChat with clean messages (attachments removed for AI SDK)
     setMessages(cleanMessagesForAI);
+
+    // Clear all file-related state to prevent cross-chat contamination
     setUploadedFiles([]);
     setPendingFiles([]);
     setShowFileUpload(false);

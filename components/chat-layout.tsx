@@ -75,7 +75,6 @@ export function ChatLayout({
     }
   };
 
-  // Updated to handle attachments
   const handleUpdateChat = async (
     chatId: string,
     messages: Message[],
@@ -129,7 +128,6 @@ export function ChatLayout({
         );
         setChats(updatedChats);
 
-        // Update current chat data if it's the one being edited
         if (currentChatId === chatId) {
           setCurrentChatData((prev) =>
             prev ? { ...prev, title: newTitle } : null

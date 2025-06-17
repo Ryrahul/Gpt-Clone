@@ -48,7 +48,7 @@ export async function getChats(): Promise<ChatItem[]> {
           id: msg._id.toString(),
           role: msg.role,
           content: msg.content,
-          attachments: msg.attachments || [], // Always provide empty array if no attachments
+          attachments: msg.attachments || [], 
           createdAt: msg.createdAt || new Date(),
         })),
       };
@@ -92,7 +92,7 @@ export async function getChat(chatId: string): Promise<ChatItem | null> {
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
-        attachments: msg.attachments || [], // Always provide empty array if no attachments
+        attachments: msg.attachments || [], 
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -102,7 +102,6 @@ export async function getChat(chatId: string): Promise<ChatItem | null> {
   }
 }
 
-// Updated to handle optional attachments
 export async function createChat(
   messages: AIMessage[],
   attachments?: MessageAttachment[]
@@ -130,7 +129,6 @@ export async function createChat(
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
 
-      // Only add attachments if they exist and this is the last user message
       const messageAttachments =
         attachments &&
         attachments.length > 0 &&
@@ -143,7 +141,7 @@ export async function createChat(
         chat: chat._id,
         role: msg.role,
         content: msg.content,
-        attachments: messageAttachments, // Will be empty array if no attachments
+        attachments: messageAttachments,
       });
       messageIds.push(message._id);
     }
@@ -176,7 +174,7 @@ export async function createChat(
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
-        attachments: msg.attachments || [], // Always provide empty array
+        attachments: msg.attachments || [], 
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -189,11 +187,10 @@ export async function createChat(
   }
 }
 
-// Updated to handle optional attachments
 export async function updateChat(
   chatId: string,
   messages: AIMessage[],
-  attachments?: MessageAttachment[] // Optional parameter
+  attachments?: MessageAttachment[] 
 ): Promise<ChatItem> {
   try {
     const user = await currentUser();
@@ -210,15 +207,12 @@ export async function updateChat(
       throw new Error("Chat not found");
     }
 
-    // Remove existing messages
     await Message.deleteMany({ chat: chatId });
 
-    // Create new messages
     const messageIds = [];
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
 
-      // Only add attachments if they exist and this is the second-to-last message (user message)
       const messageAttachments =
         attachments &&
         attachments.length > 0 &&
@@ -231,16 +225,14 @@ export async function updateChat(
         chat: chatId,
         role: msg.role,
         content: msg.content,
-        attachments: messageAttachments, // Will be empty array if no attachments
+        attachments: messageAttachments,
       });
       messageIds.push(message._id);
     }
 
-    // Update chat with new message references
     chat.messages = messageIds;
     await chat.save();
 
-    // Populate the chat with messages for return
     const populatedChat = await Chat.findById(chatId)
       .populate({
         path: "messages",
@@ -266,7 +258,7 @@ export async function updateChat(
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
-        attachments: msg.attachments || [], // Always provide empty array
+        attachments: msg.attachments || [],
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -280,7 +272,6 @@ export async function updateChat(
   }
 }
 
-// Existing functions remain the same
 export async function deleteChat(chatId: string): Promise<void> {
   try {
     const user = await currentUser();
@@ -297,10 +288,8 @@ export async function deleteChat(chatId: string): Promise<void> {
       throw new Error("Chat not found");
     }
 
-    // Delete all messages associated with the chat
     await Message.deleteMany({ chat: chatId });
 
-    // Delete the chat
     await Chat.findByIdAndDelete(chatId);
 
     revalidatePath("/chat");
@@ -341,7 +330,6 @@ export async function updateChatTitle(
   }
 }
 
-// Helper function to check if a chat has attachments
 export async function chatHasAttachments(chatId: string): Promise<boolean> {
   try {
     const user = await currentUser();
@@ -354,7 +342,7 @@ export async function chatHasAttachments(chatId: string): Promise<boolean> {
 
     const messageWithAttachments = await Message.findOne({
       chat: chatId,
-      "attachments.0": { $exists: true }, // Has at least one attachment
+      "attachments.0": { $exists: true },
     }).populate({
       path: "chat",
       match: { userId: user.id },
@@ -369,7 +357,6 @@ export async function chatHasAttachments(chatId: string): Promise<boolean> {
   }
 }
 
-// Updated search function with better error handling
 export async function searchChatsByAttachment(
   filename: string
 ): Promise<ChatItem[]> {
@@ -386,12 +373,10 @@ export async function searchChatsByAttachment(
 
     await dbConnect();
 
-    // Find messages with matching attachment names
     const messages = await Message.find({
       "attachments.name": { $regex: filename.trim(), $options: "i" },
     }).populate("chat");
 
-    // Get unique chat IDs that belong to the user
     const chatIds = [
       ...new Set(
         messages
@@ -404,7 +389,6 @@ export async function searchChatsByAttachment(
       return [];
     }
 
-    // Get the full chats with messages
     const chats = await Chat.find({
       _id: { $in: chatIds },
       userId: user.id,
@@ -433,7 +417,7 @@ export async function searchChatsByAttachment(
           id: msg._id.toString(),
           role: msg.role,
           content: msg.content,
-          attachments: msg.attachments || [], // Always provide empty array
+          attachments: msg.attachments || [], 
           createdAt: msg.createdAt || new Date(),
         })),
       };
@@ -444,7 +428,6 @@ export async function searchChatsByAttachment(
   }
 }
 
-// Updated stats function with better error handling
 export async function getAttachmentStats(): Promise<{
   totalAttachments: number;
   imageCount: number;
@@ -460,15 +443,13 @@ export async function getAttachmentStats(): Promise<{
 
     await dbConnect();
 
-    // Get all messages with attachments for this user
     const messages = await Message.find({
-      "attachments.0": { $exists: true }, // Has at least one attachment
+      "attachments.0": { $exists: true }, 
     }).populate({
       path: "chat",
       match: { userId: user.id },
     });
 
-    // Filter out messages where chat is null (user doesn't own the chat)
     const userMessages = messages.filter((msg: any) => msg.chat !== null);
 
     let totalAttachments = 0;
