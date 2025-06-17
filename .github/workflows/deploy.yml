@@ -39,7 +39,7 @@ jobs:
             --build-arg CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }} \
             --tag ryrahul7/gpt-clone-app:latest \
             --push \
-            .
+            .   
 
       - name: SSH to EC2 and Deploy
         uses: appleboy/ssh-action@master
