@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/action";
 import type { Message } from "ai";
 import type { ChatItem } from "@/types/type";
+import type { MessageAttachment } from "@/types/type"
 
 interface ChatLayoutProps {
   chats: ChatItem[];
@@ -51,15 +52,18 @@ export function ChatLayout({
     updateUrlSilently(selectedChatId);
   };
 
-  const handleCreateNewChat = async (messages: Message[]) => {
+  // Updated to handle attachments
+  const handleCreateNewChat = async (
+    messages: Message[],
+    attachments?: MessageAttachment[]
+  ) => {
     try {
       setIsLoading(true);
       setError(null);
-      const newChat = await createChat(messages);
+      const newChat = await createChat(messages, attachments);
       setChats((prev) => [newChat, ...prev]);
       setCurrentChatData(newChat);
 
-      // Update URL silently without navigation
       updateUrlSilently(newChat._id);
 
       return newChat;
@@ -72,15 +76,19 @@ export function ChatLayout({
     }
   };
 
-  const handleUpdateChat = async (chatId: string, messages: Message[]) => {
+  // Updated to handle attachments
+  const handleUpdateChat = async (
+    chatId: string,
+    messages: Message[],
+    attachments?: MessageAttachment[]
+  ) => {
     try {
       setError(null);
-      const updatedChat = await updateChat(chatId, messages);
+      const updatedChat = await updateChat(chatId, messages, attachments);
       setChats((prev) =>
         prev.map((chat) => (chat._id === chatId ? updatedChat : chat))
       );
 
-      // Update current chat data if it's the one being updated
       if (currentChatId === chatId) {
         setCurrentChatData(updatedChat);
       }
@@ -98,7 +106,6 @@ export function ChatLayout({
       await deleteChat(chatId);
       setChats((prev) => prev.filter((chat) => chat._id !== chatId));
 
-      // If we're currently viewing the deleted chat, redirect to new chat
       if (chatId === currentChatId) {
         setCurrentChatData(null);
         setCurrentChatId(null);

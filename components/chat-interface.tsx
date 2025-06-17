@@ -4,12 +4,13 @@ import type React from "react";
 import { useRef, useEffect, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Plus, Mic, Brain } from "lucide-react";
+import { Send, Plus, Mic, Brain, Paperclip } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import type { Message } from "ai";
 import { scrollToBottom, autoResizeTextarea } from "@/lib/utils";
+import { FileUpload, type UploadedFile } from "@/components/file-upload";
 
 interface ChatInterfaceProps {
   chatId: string | null;
@@ -36,6 +37,9 @@ export function ChatInterface({
   const [hasMounted, setHasMounted] = useState(false);
   const [hasRestoredMessage, setHasRestoredMessage] = useState(false);
   const [showMemoryIndicator, setShowMemoryIndicator] = useState(false);
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [nativeFiles, setNativeFiles] = useState<File[]>([]);
 
   const chatInstanceId = useRef<string>(
     `chat-${chatId || "new"}-${Date.now()}`
@@ -60,11 +64,11 @@ export function ChatInterface({
     api: "/api/chat",
     initialMessages: initialMessages,
     id: chatInstanceId.current,
-    headers: {
-      "x-chat-id": chatId || "new-chat",
-    },
     onFinish: () => {
       console.log("AI response finished");
+      setUploadedFiles([]);
+      setNativeFiles([]);
+      setShowFileUpload(false);
       setShowMemoryIndicator(true);
       setTimeout(() => setShowMemoryIndicator(false), 2000);
     },
@@ -79,7 +83,6 @@ export function ChatInterface({
     },
   });
 
-  // Restore pending message from sessionStorage after sign-in
   useEffect(() => {
     if (isSignedIn && !hasRestoredMessage && !chatId && hasMounted) {
       const pendingMessage = sessionStorage.getItem("pendingMessage");
@@ -94,7 +97,6 @@ export function ChatInterface({
     }
   }, [isSignedIn, hasRestoredMessage, chatId, setInput, hasMounted]);
 
-  // Save messages effect
   useEffect(() => {
     if (!isSignedIn || !hasMounted) return;
 
@@ -141,7 +143,6 @@ export function ChatInterface({
     hasMounted,
   ]);
 
-  // Chat change effect
   useEffect(() => {
     console.log("Chat changed:", chatId);
     console.log("Initial messages:", initialMessages);
@@ -153,15 +154,16 @@ export function ChatInterface({
     chatInstanceId.current = `chat-${chatId || "new"}-${Date.now()}`;
 
     setMessages(initialMessages);
+    setUploadedFiles([]);
+    setNativeFiles([]);
+    setShowFileUpload(false);
   }, [chatId, initialMessages, setMessages]);
 
-  // Auto-scroll and resize textarea effect
   useEffect(() => {
     scrollToBottom(scrollAreaRef);
     autoResizeTextarea(textareaRef);
   }, [messages, input]);
 
-  // Redirect effect for unauthenticated users
   useEffect(() => {
     if (hasMounted && isLoaded && !isSignedIn) {
       router.push("/sign-in");
@@ -172,9 +174,18 @@ export function ChatInterface({
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (!input.trim() || isLoading || externalLoading) return;
-      handleSubmit(e);
+
+      console.log("Submitting with files:", nativeFiles.length);
+
+      const dataTransfer = new DataTransfer();
+      nativeFiles.forEach((file) => dataTransfer.items.add(file));
+      const fileList = dataTransfer.files;
+
+      const options =
+        fileList.length > 0 ? { experimental_attachments: fileList } : {};
+      handleSubmit(e, options);
     },
-    [input, isLoading, externalLoading, handleSubmit]
+    [input, isLoading, externalLoading, handleSubmit, nativeFiles]
   );
 
   const handleKeyDown = useCallback(
@@ -182,14 +193,40 @@ export function ChatInterface({
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         if (input.trim() && !isLoading && !externalLoading) {
-          handleSubmit(e);
+          console.log("Submitting via Enter with files:", nativeFiles.length);
+
+          const syntheticEvent = {
+            preventDefault: () => {},
+            currentTarget: e.currentTarget.closest("form"),
+          } as React.FormEvent<HTMLFormElement>;
+
+          const dataTransfer = new DataTransfer();
+          nativeFiles.forEach((file) => dataTransfer.items.add(file));
+          const fileList = dataTransfer.files;
+
+          const options =
+            fileList.length > 0 ? { experimental_attachments: fileList } : {};
+          handleSubmit(syntheticEvent, options);
         }
       }
     },
-    [input, isLoading, externalLoading, handleSubmit]
+    [input, isLoading, externalLoading, handleSubmit, nativeFiles]
   );
 
-  // Early returns after all hooks have been called
+  const handleFileUploaded = (uploadedFile: UploadedFile, nativeFile: File) => {
+    setUploadedFiles((prev) => [...prev, uploadedFile]);
+    setNativeFiles((prev) => [...prev, nativeFile]);
+    console.log("File uploaded:", uploadedFile.name, "to", uploadedFile.url);
+  };
+
+  const handleFileRemoved = (fileId: string) => {
+    const fileToRemove = uploadedFiles.find((f) => f.id === fileId);
+    if (fileToRemove) {
+      setUploadedFiles((prev) => prev.filter((f) => f.id !== fileId));
+      setNativeFiles((prev) => prev.filter((f) => f !== fileToRemove.file));
+    }
+  };
+
   if (!hasMounted) {
     return (
       <div className="flex items-center justify-center h-full bg-[#212121]">
@@ -243,11 +280,19 @@ export function ChatInterface({
           </svg>
         </div>
 
-        {/* Memory Indicator */}
         {showMemoryIndicator && (
           <div className="flex items-center gap-2 text-sm text-green-400 animate-pulse">
             <Brain className="w-4 h-4" />
             <span>Memory updated</span>
+          </div>
+        )}
+
+        {uploadedFiles.length > 0 && (
+          <div className="flex items-center gap-2 text-sm text-blue-400">
+            <Paperclip className="w-4 h-4" />
+            <span>
+              {uploadedFiles.length} file{uploadedFiles.length > 1 ? "s" : ""}
+            </span>
           </div>
         )}
       </div>
@@ -281,12 +326,12 @@ export function ChatInterface({
                   How can I help you today?
                 </h1>
                 <p className="text-white/60 text-center max-w-md mb-2">
-                  I'll remember our conversations to provide more personalized
-                  assistance.
+                  I can analyze images and read documents. I'll remember our
+                  conversations to provide more personalized assistance.
                 </p>
                 <div className="flex items-center gap-2 text-sm text-green-400/70">
                   <Brain className="w-4 h-4" />
-                  <span>Memory-enhanced AI</span>
+                  <span>Memory-enhanced AI with file processing</span>
                 </div>
               </div>
             ) : (
@@ -299,8 +344,32 @@ export function ChatInterface({
                     <div className="max-w-3xl mx-auto">
                       {message.role === "user" ? (
                         <div className="flex justify-end mb-4">
-                          <div className="max-w-[70%] bg-[#2f2f2f] rounded-3xl px-5 py-3 text-white">
-                            {message.content}
+                          <div className="max-w-[70%]">
+                            {uploadedFiles.length > 0 &&
+                              index === messages.length - 1 && (
+                                <div className="mb-2 space-y-2">
+                                  {uploadedFiles.map((file, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center gap-2 text-sm text-blue-400"
+                                    >
+                                      {file.mimeType.startsWith("image/") ? (
+                                        <img
+                                          src={file.url || "/placeholder.svg"}
+                                          alt={file.name}
+                                          className="w-16 h-16 rounded object-cover"
+                                        />
+                                      ) : (
+                                        <span>📎</span>
+                                      )}
+                                      <span>{file.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            <div className="bg-[#2f2f2f] rounded-3xl px-5 py-3 text-white">
+                              {message.content}
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -341,6 +410,18 @@ export function ChatInterface({
 
       <div className="sticky bottom-0 left-0 right-0 w-full bg-[#212121] border-t border-white/10 z-10">
         <div className="max-w-3xl mx-auto p-4">
+          {/* File Upload Section */}
+          {showFileUpload && (
+            <div className="mb-4">
+              <FileUpload
+                onFileUploaded={handleFileUploaded}
+                onFileRemoved={handleFileRemoved}
+                uploadedFiles={uploadedFiles}
+                disabled={isLoading || externalLoading}
+              />
+            </div>
+          )}
+
           <form onSubmit={handleFormSubmit} className="relative">
             <div className="relative flex items-end bg-[#2f2f2f] rounded-3xl border border-white/20">
               <Button
@@ -355,7 +436,7 @@ export function ChatInterface({
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything"
+                placeholder="Ask anything about your files..."
                 className="flex-1 resize-none bg-transparent text-white placeholder-white/50 py-3 px-12 focus:outline-none max-h-[200px] min-h-[24px] overflow-y-auto"
                 style={{
                   height: "auto",
@@ -366,6 +447,22 @@ export function ChatInterface({
               />
 
               <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() => setShowFileUpload(!showFileUpload)}
+                  className={`p-2 rounded-full bg-transparent hover:bg-white/10 h-8 w-8 ${
+                    showFileUpload || uploadedFiles.length > 0
+                      ? "text-blue-400"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <Paperclip className="h-4 w-4" />
+                  {uploadedFiles.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {uploadedFiles.length}
+                    </span>
+                  )}
+                </Button>
                 <Button
                   type="button"
                   className="p-2 rounded-full bg-transparent hover:bg-white/10 text-white/70 hover:text-white h-8 w-8"
@@ -384,7 +481,7 @@ export function ChatInterface({
           </form>
           <div className="text-center text-xs text-white/50 mt-3 flex items-center justify-center gap-2">
             <Brain className="w-3 h-3" />
-            <span>ChatGPT with memory - remembers your conversations</span>
+            <span>ChatGPT with memory - analyzes images & reads documents</span>
           </div>
         </div>
       </div>

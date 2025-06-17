@@ -3,13 +3,13 @@ import { ChatLayout } from "@/components/chat-layout";
 
 interface ChatPageProps {
   params: Promise<{
-    chatId?: string[];
+    chat?: string[];
   }>;
 }
 
 export default async function ChatPage({ params }: ChatPageProps) {
-  const { chatId: chatIdArray } = await params;
-  const chatId = chatIdArray?.[0] || null;
+  const { chat: chatArray } = await params;
+  const chatId = chatArray?.[0] || null;
 
   const [chats, currentChat] = await Promise.all([
     getChats(),
