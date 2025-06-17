@@ -39,6 +39,10 @@ export function ChatMessagesArea({
 }: ChatMessagesAreaProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
+  // Check if AI has started responding (has assistant message after user message)
+  const hasAIStartedResponding =
+    messages.length > 0 && messages[messages.length - 1]?.role === "assistant";
+
   return (
     <div className="flex-1 overflow-hidden bg-[#212121]">
       <ScrollArea ref={scrollAreaRef} className="h-full">
@@ -61,20 +65,33 @@ export function ChatMessagesArea({
                 />
               ))}
 
-              {isLoading &&
-                messages.length > 0 &&
-                messages[messages.length - 1]?.role === "user" && (
-                  <div className="w-full py-6 px-4">
-                    <div className="max-w-3xl mx-auto">
+              {isLoading && (
+                <div className="w-full py-6 px-4">
+                  <div className="max-w-3xl mx-auto">
+                    {!hasAIStartedResponding ? (
+                      // Initial loading - show AI icon with typing indicator
                       <div className="flex gap-4 mb-4">
                         <div className="flex-shrink-0">{AssistantIcon}</div>
                         <div className="flex-1">
                           <TypingIndicator />
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      // AI has started responding but still loading - show subtle continuation indicator
+                      <div className="flex justify-center py-2">
+                        <div className="flex items-center gap-2 text-white/40 text-sm">
+                          <div className="flex space-x-1">
+                            <div className="w-1 h-1 bg-white/40 rounded-full animate-pulse"></div>
+                            <div className="w-1 h-1 bg-white/40 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                            <div className="w-1 h-1 bg-white/40 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+                          </div>
+                          <span>Generating response...</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
             </div>
           )}
         </div>
