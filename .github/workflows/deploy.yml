@@ -1,4 +1,4 @@
-name: Deploy GPT Clone App to EC2
+name: Deploy GPT Clone App to EC2 Instance
 
 on:
   push:
