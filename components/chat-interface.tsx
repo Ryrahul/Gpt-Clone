@@ -7,11 +7,11 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import type { Message } from "ai";
 import type { MessageAttachment } from "@/types/type";
-import { scrollToBottom, autoResizeTextarea } from "@/lib/utils";
+import { autoResizeTextarea } from "@/lib/utils";
 import type { UploadedFile } from "@/components/file-upload";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatInput } from "@/components/chat/chat-input";
-import { ChatMessagesArea } from "@/components/chat/chat-message-area";
+import { ChatMessagesArea } from "@/components/chat/chat-messages-area";
 import { useChatState } from "@/hooks/use-chat-state";
 import { useMessageTransformer } from "@/hooks/use-message-transformer";
 import { useMessageDisplay } from "@/hooks/use-message-display";
@@ -40,7 +40,6 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
@@ -85,6 +84,7 @@ export function ChatInterface({
     initialMessages: cleanMessagesForAI,
     id: chatInstanceId.current,
     onFinish: (message) => {
+      console.log("AI response finished");
       setShowFileUpload(false);
       setPendingFiles([]);
 
@@ -199,7 +199,12 @@ export function ChatInterface({
           allAttachments.push(...userMessageAttachments);
         }
 
-    
+        console.log(
+          "Saving messages:",
+          messages.length,
+          "total attachments:",
+          allAttachments.length
+        );
 
         // Handle existing chat updates
         if (chatId && onUpdateChat) {
@@ -360,7 +365,8 @@ export function ChatInterface({
    * - Avoiding race conditions in async save operations
    */
   useEffect(() => {
-   
+    console.log("Chat changed:", chatId);
+    console.log("Initial messages:", initialMessages.length);
 
     // Update refs to match new chat context
     chatIdRef.current = chatId;
@@ -387,9 +393,8 @@ export function ChatInterface({
   ]);
 
   useEffect(() => {
-    scrollToBottom(scrollAreaRef);
     autoResizeTextarea(textareaRef);
-  }, [displayMessages, input]);
+  }, [input]);
 
   useEffect(() => {
     if (hasMounted && isLoaded && !isSignedIn) {
@@ -402,6 +407,7 @@ export function ChatInterface({
       e.preventDefault();
       if (!input.trim() || isLoading || externalLoading) return;
 
+      console.log("Submitting with pending files:", pendingFiles.length);
 
       if (pendingFiles.length > 0) {
         const dataTransfer = new DataTransfer();
@@ -456,6 +462,7 @@ export function ChatInterface({
   const handleFileUploaded = (uploadedFile: UploadedFile, nativeFile: File) => {
     setUploadedFiles((prev) => [...prev, uploadedFile]);
     setPendingFiles((prev) => [...prev, nativeFile]);
+    console.log("File uploaded:", uploadedFile.name, "to", uploadedFile.url);
   };
 
   const handleFileRemoved = (fileId: string) => {
@@ -467,12 +474,16 @@ export function ChatInterface({
   };
 
   useEffect(() => {
+    console.log("Display messages updated:", displayMessages.length);
     displayMessages.forEach((msg, idx) => {
       if (
         msg.experimental_attachments &&
         msg.experimental_attachments.length > 0
       ) {
-      
+        console.log(
+          `Message ${idx} has ${msg.experimental_attachments.length} attachments:`,
+          msg.experimental_attachments
+        );
       }
     });
   }, [displayMessages]);

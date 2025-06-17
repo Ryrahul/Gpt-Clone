@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Message } from "ai";
 import { ChatMessage } from "@/components/chat/chat-message";
@@ -38,6 +38,20 @@ export function ChatMessagesArea({
   error,
 }: ChatMessagesAreaProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timeoutId);
+  }, [displayMessages, isLoading]);
 
   // Check if AI has started responding (has assistant message after user message)
   const hasAIStartedResponding =
@@ -92,6 +106,9 @@ export function ChatMessagesArea({
                   </div>
                 </div>
               )}
+
+              {/* Invisible element to scroll to */}
+              <div ref={messagesEndRef} className="h-1" />
             </div>
           )}
         </div>
