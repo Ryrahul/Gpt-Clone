@@ -1,24 +1,21 @@
 name: Deploy GPT Clone App to EC2 Instance
-
 on:
   push:
     branches:
       - master
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
+      
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
+      
       - name: Build and Push Docker Image
         run: |
           docker build --no-cache \
@@ -36,9 +33,8 @@ jobs:
             --build-arg CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }} \
             -t ryrahul7/gpt-clone-app:latest \
             .
-
           docker push ryrahul7/gpt-clone-app:latest
-
+      
       - name: SSH to EC2 and Deploy
         uses: appleboy/ssh-action@master
         with:
