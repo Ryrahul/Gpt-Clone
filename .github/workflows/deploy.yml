@@ -49,7 +49,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/gpt-clone
+            cd ~/gpt-clone-app
             docker compose down
             docker system prune -af
             docker pull ryrahul7/gpt-clone-app:latest
