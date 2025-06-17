@@ -1,17 +1,21 @@
 "use client";
 
+import type React from "react";
+
 import type { Message } from "ai";
 import { AttachmentDisplay } from "@/components/attachment-display";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { Copy, Check, Edit3, Save, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ChatMessageProps {
   message: Message;
   index: number;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  isEditable?: boolean;
 }
 
 const AssistantIcon = (
@@ -88,16 +92,73 @@ function CodeBlock({
   );
 }
 
-export function ChatMessage({ message, index }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  index,
+  onEditMessage,
+  isEditable = true,
+}: ChatMessageProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const [isHovered, setIsHovered] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height =
+        textareaRef.current.scrollHeight + "px";
+    }
+  }, [isEditing]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditContent(message.content);
+  };
+
+  const handleSave = () => {
+    if (
+      editContent.trim() &&
+      editContent !== message.content &&
+      onEditMessage
+    ) {
+      onEditMessage(message.id, editContent.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditContent(message.content);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditContent(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = e.target.scrollHeight + "px";
+  };
+
   return (
     <div
       key={`${message.id}-${index}`}
       className="w-full py-4 sm:py-6 px-3 sm:px-4"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="max-w-3xl mx-auto">
         {message.role === "user" ? (
           <div className="flex justify-end mb-4">
-            <div className="max-w-[85%] sm:max-w-[70%]">
+            <div className="max-w-[85%] sm:max-w-[70%] relative group">
               {message.experimental_attachments &&
                 message.experimental_attachments.length > 0 && (
                   <div className="mb-2 flex flex-row gap-2 flex-wrap">
@@ -108,15 +169,67 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
                           name: attachment.name,
                           contentType: attachment.contentType,
                           url: attachment.url,
-                          size: (attachment as any).size || 0, // Handle missing size property
+                          size: (attachment as any).size || 0,
                         }}
                       />
                     ))}
                   </div>
                 )}
-              <div className="bg-[#2f2f2f] rounded-3xl px-4 sm:px-5 py-2.5 sm:py-3 text-white text-sm sm:text-base">
-                {message.content}
-              </div>
+
+              {isEditing ? (
+                <div className="bg-[#2f2f2f] rounded-3xl px-4 sm:px-5 py-2.5 sm:py-3">
+                  <textarea
+                    ref={textareaRef}
+                    value={editContent}
+                    onChange={handleTextareaChange}
+                    onKeyDown={handleKeyDown}
+                    className="w-full bg-transparent text-white resize-none focus:outline-none text-sm sm:text-base min-h-[24px]"
+                    style={{ overflow: "hidden" }}
+                  />
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
+                    <Button
+                      onClick={handleSave}
+                      size="sm"
+                      className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                      disabled={
+                        !editContent.trim() || editContent === message.content
+                      }
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      onClick={handleCancel}
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-3 text-white/70 hover:text-white hover:bg-white/10 text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Cancel
+                    </Button>
+                    <span className="text-xs text-white/50 ml-auto">
+                      Enter to save • Esc to cancel
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <div className="bg-[#2f2f2f] rounded-3xl px-4 sm:px-5 py-2.5 sm:py-3 text-white text-sm sm:text-base">
+                    {message.content}
+                  </div>
+
+                  {isEditable && onEditMessage && (isHovered || isEditing) && (
+                    <Button
+                      onClick={handleEdit}
+                      size="sm"
+                      variant="ghost"
+                      className="absolute -left-10 top-1/2 -translate-y-1/2 h-8 w-8 p-0 text-white/50 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -139,7 +252,6 @@ export function ChatMessage({ message, index }: ChatMessageProps) {
                         );
                       }
 
-                      // Inline code
                       return (
                         <code
                           className="bg-[#2f2f2f] text-orange-300 px-1.5 py-0.5 rounded text-sm font-mono"

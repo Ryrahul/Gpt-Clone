@@ -5,13 +5,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Message } from "ai";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatEmptyState } from "@/components/chat/chat-empty-state";
-import { TypingIndicator } from "@/components/typing-indicator";
 
 interface ChatMessagesAreaProps {
   displayMessages: Message[];
   isLoading: boolean;
   messages: Message[];
   error: Error | undefined;
+  onEditMessage?: (messageId: string, newContent: string) => void;
 }
 
 const AssistantIcon = (
@@ -36,11 +36,11 @@ export function ChatMessagesArea({
   isLoading,
   messages,
   error,
+  onEditMessage,
 }: ChatMessagesAreaProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     const scrollToBottom = () => {
       if (messagesEndRef.current) {
@@ -48,12 +48,10 @@ export function ChatMessagesArea({
       }
     };
 
-    // Small delay to ensure DOM is updated
     const timeoutId = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timeoutId);
   }, [displayMessages, isLoading]);
 
-  // Check if AI has started responding (has assistant message after user message)
   const hasAIStartedResponding =
     messages.length > 0 && messages[messages.length - 1]?.role === "assistant";
 
@@ -76,6 +74,8 @@ export function ChatMessagesArea({
                   key={`${message.id}-${index}`}
                   message={message}
                   index={index}
+                  onEditMessage={onEditMessage}
+                  isEditable={message.role === "user"}
                 />
               ))}
 
@@ -83,21 +83,32 @@ export function ChatMessagesArea({
                 <div className="w-full py-6 px-4">
                   <div className="max-w-3xl mx-auto">
                     {!hasAIStartedResponding ? (
-                      // Initial loading - show AI icon with typing indicator
                       <div className="flex gap-4 mb-4">
                         <div className="flex-shrink-0">{AssistantIcon}</div>
-                        <div className="flex-1">
-                          <TypingIndicator />
+                        <div className="flex-1 flex items-center">
+                          <div className="relative">
+                            <div
+                              className="w-3 h-3 bg-white rounded-full"
+                              style={{
+                                animation: "breathe 2s ease-in-out infinite",
+                                boxShadow: "0 0 10px rgba(255, 255, 255, 0.5)",
+                              }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     ) : (
-                      // AI has started responding but still loading - show subtle continuation indicator
                       <div className="flex justify-center py-2">
                         <div className="flex items-center gap-2 text-white/40 text-sm">
-                          <div className="flex space-x-1">
-                            <div className="w-1 h-1 bg-white/40 rounded-full animate-pulse"></div>
-                            <div className="w-1 h-1 bg-white/40 rounded-full animate-pulse [animation-delay:0.2s]"></div>
-                            <div className="w-1 h-1 bg-white/40 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+                          <div className="relative">
+                            <div
+                              className="w-2 h-2 bg-white/60 rounded-full"
+                              style={{
+                                animation:
+                                  "subtleBreathe 1.5s ease-in-out infinite",
+                                boxShadow: "0 0 8px rgba(255, 255, 255, 0.3)",
+                              }}
+                            ></div>
                           </div>
                           <span>Generating response...</span>
                         </div>
@@ -107,12 +118,40 @@ export function ChatMessagesArea({
                 </div>
               )}
 
-              {/* Invisible element to scroll to */}
               <div ref={messagesEndRef} className="h-1" />
             </div>
           )}
         </div>
       </ScrollArea>
+      <style jsx>{`
+        @keyframes breathe {
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 0.9;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+          }
+          50% {
+            transform: scale(1.15);
+            opacity: 1;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+          }
+        }
+
+        @keyframes subtleBreathe {
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 0.7;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.9;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -29,7 +29,7 @@ interface ChatInterfaceProps {
     attachments?: MessageAttachment[]
   ) => Promise<any>;
   isLoading?: boolean;
-  isCollapsed?: boolean; 
+  isCollapsed?: boolean;
 }
 
 export function ChatInterface({
@@ -38,7 +38,7 @@ export function ChatInterface({
   onUpdateChat,
   onCreateNewChat,
   isLoading: externalLoading = false,
-  isCollapsed = false, 
+  isCollapsed = false,
 }: ChatInterfaceProps) {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
@@ -81,6 +81,7 @@ export function ChatInterface({
     setMessages,
     setInput,
     error,
+    append,
   } = useChat({
     api: "/api/chat",
     initialMessages: cleanMessagesForAI,
@@ -261,6 +262,7 @@ export function ChatInterface({
         // Handle new chat creation
         else if (!chatId && onCreateNewChat) {
           const messagesWithAttachments = messages.map((msg) => {
+            // For new chats, only check for current session attachments
             if (
               msg.experimental_attachments &&
               msg.experimental_attachments.length > 0
@@ -273,27 +275,6 @@ export function ChatInterface({
                   size: (att as any).size || 0,
                   url: att.url,
                 })),
-              };
-            }
-
-            const originalMsg = transformedMessages.find(
-              (orig) => orig.id === msg.id
-            );
-            if (
-              originalMsg &&
-              originalMsg.experimental_attachments &&
-              originalMsg.experimental_attachments.length > 0
-            ) {
-              return {
-                ...msg,
-                attachments: originalMsg.experimental_attachments.map(
-                  (att) => ({
-                    name: att.name || "Unknown",
-                    mimeType: att.contentType || "application/octet-stream",
-                    size: (att as any).size || 0,
-                    url: att.url,
-                  })
-                ),
               };
             }
 
@@ -403,6 +384,31 @@ export function ChatInterface({
       router.push("/sign-in");
     }
   }, [hasMounted, isLoaded, isSignedIn, router]);
+
+  const handleEditMessage = useCallback(
+    (messageId: string, newContent: string) => {
+      // Find the index of the message being edited so that wecan remove msg after it 
+      const messageIndex = messages.findIndex((msg) => msg.id === messageId);
+
+      if (messageIndex === -1) return;
+
+      // Create new messages array with all messages before the edited message
+      // Don't include the edited message itself append will add it
+      const truncatedMessages = messages.slice(0, messageIndex);
+
+      // Update the messages to remove everything from the edited message onwards
+      setMessages(truncatedMessages);
+
+      // Use append to add the edited message and get AI response
+      setTimeout(() => {
+        append({
+          role: "user",
+          content: newContent,
+        });
+      }, 100);
+    },
+    [messages, setMessages, append]
+  );
 
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -519,6 +525,7 @@ export function ChatInterface({
         isLoading={isLoading}
         messages={messages}
         error={error}
+        onEditMessage={handleEditMessage}
       />
 
       <ChatInput
