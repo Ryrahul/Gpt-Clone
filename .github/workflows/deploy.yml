@@ -19,10 +19,10 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Build and Push Docker Image (Simple)
+      - name: Build and Push Docker Image
         run: |
           docker build --no-cache \
-            --build-arg MONGODB_URI=${{ secrets.MONGODB_URI }} \
+            --build-arg MONGODB_URI="${{ secrets.MONGODB_URI }}" \
             -t ryrahul7/gpt-clone-app:latest .
           docker push ryrahul7/gpt-clone-app:latest
 
@@ -33,8 +33,20 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/gpt-clone
-            docker compose down
-            docker system prune -af
+            set -e
+
+            cd ~/gpt-clone || exit 1
+
+            echo "Stopping existing containers..."
+            docker compose down || true
+
+            echo "Cleaning up old Docker images and containers..."
+            docker system prune -af || true
+
+            echo "Pulling latest image from Docker Hub..."
             docker pull ryrahul7/gpt-clone-app:latest
+
+            echo "Recreating containers..."
             docker compose up -d --remove-orphans
+
+            echo "Deployment finished successfully!"
