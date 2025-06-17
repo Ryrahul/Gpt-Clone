@@ -36,7 +36,7 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 w-full bg-[#212121] border-t border-white/10 z-10">
+    <div className="sticky bottom-0 left-0 right-0 w-full bg-[#212121]  z-10">
       <div className="max-w-3xl mx-auto p-3 sm:p-4">
         {showFileUpload && (
           <div className="mb-4">
@@ -50,7 +50,7 @@ export function ChatInput({
         )}
 
         <form onSubmit={onSubmit} className="relative">
-          <div className="relative flex items-end bg-[#2f2f2f] rounded-3xl border border-white/20">
+          <div className="relative flex items-end bg-[#2f2f2f] rounded-3xl border border-white/20 p-4">
             <Button
               type="button"
               className="absolute left-2 sm:left-3 bottom-2 sm:bottom-3 p-1.5 sm:p-2 rounded-full bg-transparent hover:bg-white/10 text-white/70 hover:text-white h-7 w-7 sm:h-8 sm:w-8"
@@ -63,7 +63,7 @@ export function ChatInput({
               value={input}
               onChange={onInputChange}
               onKeyDown={onKeyDown}
-              placeholder="Ask anything about your files..."
+              placeholder="Ask anything ....."
               className="flex-1 resize-none bg-transparent text-white placeholder-white/50 py-2.5 sm:py-3 px-10 sm:px-12 focus:outline-none max-h-[150px] sm:max-h-[200px] min-h-[20px] sm:min-h-[24px] overflow-y-auto text-sm sm:text-base"
               style={{
                 height: "auto",
