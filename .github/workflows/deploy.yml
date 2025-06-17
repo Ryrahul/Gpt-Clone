@@ -13,16 +13,13 @@ jobs:
       - name: 📦 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🛠 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: 🔐 Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: 🏗 Build and Push Docker Image
+      - name: 🏗 Build and Push Docker Image (Simple)
         run: |
           docker build --no-cache \
             --build-arg MONGODB_URI=${{ secrets.MONGODB_URI }} \
@@ -37,7 +34,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/gpt-clone
-            echo "Pulling latest image..."
             docker compose down
             docker system prune -af
             docker pull ryrahul7/gpt-clone-app:latest
