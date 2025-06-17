@@ -11,7 +11,7 @@ import { autoResizeTextarea } from "@/lib/utils";
 import type { UploadedFile } from "@/components/file-upload";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatInput } from "@/components/chat/chat-input";
-import { ChatMessagesArea } from "@/components/chat/chat-messages-area";
+import { ChatMessagesArea } from "@/components/chat/chat-message-area";
 import { useChatState } from "@/hooks/use-chat-state";
 import { useMessageTransformer } from "@/hooks/use-message-transformer";
 import { useMessageDisplay } from "@/hooks/use-message-display";
