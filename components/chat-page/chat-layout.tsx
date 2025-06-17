@@ -30,6 +30,7 @@ export function ChatLayout({
     currentChat
   );
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +170,8 @@ export function ChatLayout({
         onEditChat={handleEditChat}
         onDeleteChat={handleDeleteChat}
         onToggleCollapse={handleToggleCollapse}
+        isMobileMenuOpen={isMobileSidebarOpen}
+        onToggleMobileMenu={setIsMobileSidebarOpen}
       />
 
       <div
@@ -176,7 +179,7 @@ export function ChatLayout({
           isCollapsed ? "ml-0" : ""
         }`}
         style={{
-          marginLeft: isCollapsed ? "0" : "0", 
+          marginLeft: isCollapsed ? "0" : "0",
         }}
       >
         <ChatInterface
@@ -186,6 +189,11 @@ export function ChatLayout({
           onCreateNewChat={handleCreateNewChat}
           isLoading={isLoading}
           isCollapsed={isCollapsed}
+          onToggleMobileSidebar={() =>
+            setIsMobileSidebarOpen(!isMobileSidebarOpen)
+          }
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          onSetMobileSidebarOpen={setIsMobileSidebarOpen}
         />
       </div>
     </div>

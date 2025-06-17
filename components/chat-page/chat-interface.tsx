@@ -30,6 +30,9 @@ interface ChatInterfaceProps {
   ) => Promise<any>;
   isLoading?: boolean;
   isCollapsed?: boolean;
+  onToggleMobileSidebar?: () => void;
+  isMobileSidebarOpen?: boolean;
+  onSetMobileSidebarOpen?: (open: boolean) => void;
 }
 
 export function ChatInterface({
@@ -39,6 +42,9 @@ export function ChatInterface({
   onCreateNewChat,
   isLoading: externalLoading = false,
   isCollapsed = false,
+  onToggleMobileSidebar,
+  isMobileSidebarOpen = false,
+  onSetMobileSidebarOpen,
 }: ChatInterfaceProps) {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
@@ -387,13 +393,13 @@ export function ChatInterface({
 
   const handleEditMessage = useCallback(
     (messageId: string, newContent: string) => {
-      // Find the index of the message being edited so that wecan remove msg after it
+      // Find the index of the message being edited
       const messageIndex = messages.findIndex((msg) => msg.id === messageId);
 
       if (messageIndex === -1) return;
 
-      // Create new messages array with all messages before the edited message
-      // Don't include the edited message itself append will add it
+      // Create new messages array with all messages BEFORE the edited message
+      // Don't include the edited message itself - append will add it
       const truncatedMessages = messages.slice(0, messageIndex);
 
       // Update the messages to remove everything from the edited message onwards
@@ -500,10 +506,10 @@ export function ChatInterface({
     return (
       <div className="flex items-center justify-center h-full bg-[#212121]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 bg-[#10a37f] rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-[#10a37f] rounded-full flex items-center justify-center">
             <svg
-              width="16"
-              height="16"
+              width="24"
+              height="24"
               viewBox="0 0 24 24"
               fill="none"
               className="text-white animate-pulse"
@@ -514,7 +520,9 @@ export function ChatInterface({
               />
             </svg>
           </div>
-          <div className="text-white/70 text-sm">Initializing ChatGPT...</div>
+          <div className="text-white/70 text-sm font-light">
+            Initializing ChatGPT...
+          </div>
         </div>
       </div>
     );
@@ -534,6 +542,7 @@ export function ChatInterface({
         showMemoryIndicator={showMemoryIndicator}
         uploadedFiles={uploadedFiles}
         isCollapsed={isCollapsed}
+        onToggleMobileSidebar={onToggleMobileSidebar}
       />
 
       <ChatMessagesArea

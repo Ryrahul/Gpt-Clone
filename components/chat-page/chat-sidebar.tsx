@@ -8,7 +8,6 @@ import {
   Grid3X3,
   Brain,
   X,
-  Menu,
   PanelLeftClose,
   Edit3,
   Shield,
@@ -27,6 +26,8 @@ interface ChatSidebarProps {
   onEditChat: (chatId: string) => void;
   onDeleteChat: (chatId: string) => void;
   onToggleCollapse?: (collapsed: boolean) => void;
+  isMobileMenuOpen?: boolean;
+  onToggleMobileMenu?: (open: boolean) => void;
 }
 
 export function ChatSidebar({
@@ -37,9 +38,10 @@ export function ChatSidebar({
   onEditChat,
   onDeleteChat,
   onToggleCollapse,
+  isMobileMenuOpen = false,
+  onToggleMobileMenu,
 }: ChatSidebarProps) {
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
@@ -78,7 +80,7 @@ export function ChatSidebar({
             </Button>
 
             <Button
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() => onToggleMobileMenu?.(false)}
               className="md:hidden p-1.5 h-7 w-7 bg-transparent hover:bg-white/10 text-white/70"
             >
               <X className="h-3.5 w-3.5" />
@@ -90,7 +92,7 @@ export function ChatSidebar({
           <Button
             onClick={() => {
               onNewChat();
-              setIsMobileMenuOpen(false);
+              onToggleMobileMenu?.(false);
             }}
             className="w-full h-10 bg-transparent hover:bg-white/10 text-white flex items-center justify-between gap-2.5 px-3 rounded-lg"
           >
@@ -115,7 +117,7 @@ export function ChatSidebar({
           <Button
             onClick={() => {
               router.push("/memories");
-              setIsMobileMenuOpen(false);
+              onToggleMobileMenu?.(false);
             }}
             className="w-full h-10 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-2.5 px-3 rounded-lg"
           >
@@ -160,11 +162,11 @@ export function ChatSidebar({
               availableChats={availableChats}
               onNewChat={() => {
                 onNewChat();
-                setIsMobileMenuOpen(false);
+                onToggleMobileMenu?.(false);
               }}
               onSelectChat={(chatId) => {
                 onSelectChat(chatId);
-                setIsMobileMenuOpen(false);
+                onToggleMobileMenu?.(false);
               }}
               onEditChat={onEditChat}
               onDeleteChat={onDeleteChat}
@@ -205,13 +207,7 @@ export function ChatSidebar({
         onNewChat={onNewChat}
       />
 
-      <Button
-        onClick={() => setIsMobileMenuOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 h-9 w-9 bg-[#2f2f2f] hover:bg-[#3f3f3f] text-white border border-white/20 rounded-lg"
-      >
-        <Menu className="h-3.5 w-3.5" />
-      </Button>
-
+      {/* Collapsed sidebar controls */}
       {isCollapsed && (
         <div className="hidden md:block fixed top-4 left-[120px] z-30">
           <div className="flex items-center gap-2">
@@ -219,7 +215,7 @@ export function ChatSidebar({
               onClick={handleToggleCollapse}
               className="p-2 h-7 w-7 bg-transparent hover:bg-white/10 text-white/70 hover:text-white rounded-md border border-white/20"
             >
-              <Menu className="h-3.5 w-3.5" />
+              <PanelLeftClose className="h-3.5 w-3.5" />
             </Button>
             <Button
               onClick={onNewChat}
@@ -231,6 +227,7 @@ export function ChatSidebar({
         </div>
       )}
 
+      {/* Desktop sidebar */}
       <div
         className={`hidden md:flex bg-[#171717] border-r border-white/10 flex-col h-screen transition-all duration-300 ease-in-out relative ${
           isCollapsed ? "w-0 overflow-hidden" : "w-64"
@@ -239,11 +236,12 @@ export function ChatSidebar({
         {sidebarContent}
       </div>
 
+      {/* Mobile sidebar overlay and panel */}
       {isMobileMenuOpen && (
         <>
           <div
             className="md:hidden fixed inset-0 bg-black/50 z-40"
-            onClick={() => setIsMobileMenuOpen(false)}
+            onClick={() => onToggleMobileMenu?.(false)}
           />
           <div className="md:hidden fixed left-0 top-0 bottom-0 w-64 bg-[#171717] border-r border-white/10 flex flex-col z-50 transform transition-transform duration-300 ease-in-out">
             {sidebarContent}
