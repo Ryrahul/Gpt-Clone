@@ -72,6 +72,41 @@ export function ChatInterface({
   const { transformedMessages, cleanMessagesForAI } =
     useMessageTransformer(initialMessages);
 
+  // ✅ CRITICAL FIX: Convert database attachments to experimental_attachments format
+  const messagesWithExperimentalAttachments = useCallback((): Message[] => {
+    if (!initialMessages || initialMessages.length === 0) return [];
+
+    return initialMessages.map((msg: any): Message => {
+      const baseMessage: Message = {
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        createdAt: msg.createdAt,
+      };
+
+      // If message has attachments from database, convert to experimental_attachments
+      if (msg.attachments && msg.attachments.length > 0) {
+        const experimentalAttachments = msg.attachments.map(
+          (att: MessageAttachment) => ({
+            name: att.name,
+            contentType: att.mimeType,
+            url: att.url,
+            size: att.size,
+            width: att.width,
+            height: att.height,
+          })
+        );
+
+        return {
+          ...baseMessage,
+          experimental_attachments: experimentalAttachments,
+        } as Message;
+      }
+
+      return baseMessage;
+    });
+  }, [initialMessages]);
+
   useEffect(() => {
     if (isLoaded) {
       setHasMounted(true);
@@ -90,7 +125,8 @@ export function ChatInterface({
     append,
   } = useChat({
     api: "/api/chat",
-    initialMessages: cleanMessagesForAI,
+    // ✅ CRITICAL FIX: Use messages with experimental_attachments restored from database
+    initialMessages: messagesWithExperimentalAttachments(),
     id: chatInstanceId.current,
     onFinish: (message) => {
       console.log("AI response finished");
@@ -139,34 +175,7 @@ export function ChatInterface({
   ]);
 
   /**
-   * SAVE MESSAGES useEffect - Complex message persistence logic
-   *
-   * WHY WE USE THIS APPROACH:
-   * This useEffect handles saving chat messages to the database after AI responses complete.
-   * We're forced to use this pattern due to limitations in the AI SDK's useChat hook.
-   *
-   * BETTER APPROACH WOULD BE:
-   * Ideally, we'd save messages directly in the useChat's onFinish callback, which would be
-   * cleaner and more straightforward. However, this doesn't work because:
-   * 1. onFinish doesn't contain the latest complete message state (missing last 2 messages)
-   * 2. onFinish only provides the assistant's response message, not the full conversation
-   * 3. Attempting to modify other state within onFinish causes weird behavior and state conflicts
-   * 4. The timing of onFinish vs state updates creates race conditions
-   *
-   * CURRENT APPROACH EXPLANATION:
-   * - We watch the messages array and trigger saves when it changes
-   * - Multiple guards prevent unnecessary saves and race conditions
-   * - We only save after AI responses complete (not after user messages)
-   * - Complex attachment handling merges current session files with database files
-   * - Refs are used to prevent stale closure issues in the async function
-   *
-   * TRADE-OFFS:
-   * ✅ Reliable message persistence
-   * ✅ Handles attachments correctly
-   * ✅ Prevents duplicate saves
-   * ❌ Complex logic that's hard to follow
-   * ❌ Multiple useEffect dependencies
-   * ❌ Potential for race conditions if not carefully managed
+   * SAVE MESSAGES useEffect - Simplified to work with fixed backend
    */
   useEffect(() => {
     if (!isSignedIn || !hasMounted) return;
@@ -188,109 +197,40 @@ export function ChatInterface({
       try {
         isSavingRef.current = true;
 
-        // Process uploaded files into attachment format
-        const allAttachments: MessageAttachment[] = [];
+        // ✅ Only collect global attachments from current session uploads
+        let globalAttachments: MessageAttachment[] | undefined = undefined;
+
         if (uploadedFiles.length > 0) {
-          const userMessageAttachments: MessageAttachment[] = uploadedFiles.map(
-            (file, index) => ({
-              id: file.id,
-              url: file.url,
-              name: file.name,
-              type: file.type,
-              mimeType: file.mimeType,
-              size: file.size,
-              width: file.width,
-              height: file.height,
-              pages: file.pages,
-              provider: file.provider,
-            })
-          );
-          allAttachments.push(...userMessageAttachments);
+          globalAttachments = uploadedFiles.map((file) => ({
+            id: file.id,
+            url: file.url,
+            name: file.name,
+            type: file.type,
+            mimeType: file.mimeType,
+            size: file.size,
+            width: file.width,
+            height: file.height,
+            pages: file.pages,
+            provider: file.provider,
+          }));
         }
 
-        console.log(
-          "Saving messages:",
-          messages.length,
-          "total attachments:",
-          allAttachments.length
-        );
+        // Debug: Log which messages have experimental_attachments
+        messages.forEach((msg, idx) => {
+          if (
+            msg.experimental_attachments &&
+            msg.experimental_attachments.length > 0
+          ) {
+          }
+        });
 
         // Handle existing chat updates
         if (chatId && onUpdateChat) {
-          const messagesWithAttachments = messages.map((msg) => {
-            // Check if message has attachments from current session
-            if (
-              msg.experimental_attachments &&
-              msg.experimental_attachments.length > 0
-            ) {
-              return {
-                ...msg,
-                attachments: msg.experimental_attachments.map((att) => ({
-                  name: att.name || "Unknown",
-                  mimeType: att.contentType || "application/octet-stream",
-                  size: (att as any).size || 0,
-                  url: att.url,
-                })),
-              };
-            }
-
-            // Check if message should have attachments from database
-            const originalMsg = transformedMessages.find(
-              (orig) => orig.id === msg.id
-            );
-            if (
-              originalMsg &&
-              originalMsg.experimental_attachments &&
-              originalMsg.experimental_attachments.length > 0
-            ) {
-              return {
-                ...msg,
-                attachments: originalMsg.experimental_attachments.map(
-                  (att) => ({
-                    name: att.name || "Unknown",
-                    mimeType: att.contentType || "application/octet-stream",
-                    size: (att as any).size || 0,
-                    url: att.url,
-                  })
-                ),
-              };
-            }
-
-            return msg;
-          });
-
-          await onUpdateChat(
-            chatId,
-            messagesWithAttachments,
-            allAttachments.length > 0 ? allAttachments : undefined
-          );
+          await onUpdateChat(chatId, messages, globalAttachments);
         }
         // Handle new chat creation
         else if (!chatId && onCreateNewChat) {
-          const messagesWithAttachments = messages.map((msg) => {
-            // For new chats, only check for current session attachments
-            if (
-              msg.experimental_attachments &&
-              msg.experimental_attachments.length > 0
-            ) {
-              return {
-                ...msg,
-                attachments: msg.experimental_attachments.map((att) => ({
-                  name: att.name || "Unknown",
-                  mimeType: att.contentType || "application/octet-stream",
-                  size: (att as any).size || 0,
-                  url: att.url,
-                })),
-              };
-            }
-
-            return msg;
-          });
-
-          const newChat = await onCreateNewChat(
-            messagesWithAttachments,
-            allAttachments.length > 0 ? allAttachments : undefined
-          );
+          const newChat = await onCreateNewChat(messages, globalAttachments);
           if (newChat && newChat._id) {
             chatIdRef.current = newChat._id;
           }
@@ -300,7 +240,7 @@ export function ChatInterface({
         lastSavedLengthRef.current = messages.length;
 
         // Clean up uploaded files after successful save
-        if (allAttachments.length > 0) {
+        if (globalAttachments && globalAttachments.length > 0) {
           setUploadedFiles([]);
         }
       } catch (error) {
@@ -324,39 +264,13 @@ export function ChatInterface({
     isSignedIn,
     hasMounted,
     uploadedFiles,
+    setUploadedFiles,
   ]);
 
   /**
    * CHAT INITIALIZATION useEffect - Handles chat switching and state reset
-   *
-   * WHY WE NEED THIS:
-   * This useEffect runs when the user switches between different chats or creates a new chat.
-   * It's essential for maintaining proper state isolation between different conversations.
-   *
-   * WHAT IT DOES:
-   * 1. Resets all refs to match the new chat context
-   * 2. Generates a new unique chat instance ID for the AI SDK
-   * 3. Reinitializes the useChat hook with clean messages (no attachments)
-   * 4. Clears file upload state to prevent cross-chat contamination
-   * 5. Resets UI state like file upload visibility
-   *
-   * WHY NOT A SIMPLER APPROACH:
-   * We can't just update individual pieces of state because:
-   * - The useChat hook needs to be completely reinitialized with new messages
-   * - File state must be cleared to prevent files from one chat appearing in another
-   * - Refs need to be updated to prevent stale references in async operations
-   * - The chat instance ID must be unique to prevent AI SDK conflicts
-   *
-   * CRITICAL FOR:
-   * - Preventing message leakage between chats
-   * - Ensuring file uploads don't persist across chat switches
-   * - Maintaining proper save state tracking
-   * - Avoiding race conditions in async save operations
    */
   useEffect(() => {
-    console.log("Chat changed:", chatId);
-    console.log("Initial messages:", initialMessages.length);
-
     // Update refs to match new chat context
     chatIdRef.current = chatId;
     lastSavedLengthRef.current = initialMessages.length;
@@ -365,8 +279,19 @@ export function ChatInterface({
     // Generate unique instance ID to prevent AI SDK conflicts
     chatInstanceId.current = `chat-${chatId || "new"}-${Date.now()}`;
 
-    // Reinitialize useChat with clean messages (attachments removed for AI SDK)
-    setMessages(cleanMessagesForAI);
+    // ✅ CRITICAL FIX: Reinitialize with experimental_attachments restored
+    const messagesWithAttachments = messagesWithExperimentalAttachments();
+
+    // Debug: Log which messages have attachments
+    messagesWithAttachments.forEach((msg, idx) => {
+      if (
+        msg.experimental_attachments &&
+        msg.experimental_attachments.length > 0
+      ) {
+      }
+    });
+
+    setMessages(messagesWithAttachments);
 
     // Clear all file-related state to prevent cross-chat contamination
     setUploadedFiles([]);
@@ -375,6 +300,7 @@ export function ChatInterface({
   }, [
     chatId,
     initialMessages,
+    messagesWithExperimentalAttachments,
     setMessages,
     setUploadedFiles,
     setPendingFiles,
@@ -393,19 +319,12 @@ export function ChatInterface({
 
   const handleEditMessage = useCallback(
     (messageId: string, newContent: string) => {
-      // Find the index of the message being edited
       const messageIndex = messages.findIndex((msg) => msg.id === messageId);
-
       if (messageIndex === -1) return;
 
-      // Create new messages array with all messages BEFORE the edited message
-      // Don't include the edited message itself - append will add it
       const truncatedMessages = messages.slice(0, messageIndex);
-
-      // Update the messages to remove everything from the edited message onwards
       setMessages(truncatedMessages);
 
-      // Use append to add the edited message and get AI response
       setTimeout(() => {
         append({
           role: "user",
@@ -420,8 +339,6 @@ export function ChatInterface({
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (!input.trim() || isLoading || externalLoading) return;
-
-      console.log("Submitting with pending files:", pendingFiles.length);
 
       if (pendingFiles.length > 0) {
         const dataTransfer = new DataTransfer();
@@ -476,7 +393,6 @@ export function ChatInterface({
   const handleFileUploaded = (uploadedFile: UploadedFile, nativeFile: File) => {
     setUploadedFiles((prev) => [...prev, uploadedFile]);
     setPendingFiles((prev) => [...prev, nativeFile]);
-    console.log("File uploaded:", uploadedFile.name, "to", uploadedFile.url);
   };
 
   const handleFileRemoved = (fileId: string) => {
@@ -488,16 +404,11 @@ export function ChatInterface({
   };
 
   useEffect(() => {
-    console.log("Display messages updated:", displayMessages.length);
     displayMessages.forEach((msg, idx) => {
       if (
         msg.experimental_attachments &&
         msg.experimental_attachments.length > 0
       ) {
-        console.log(
-          `Message ${idx} has ${msg.experimental_attachments.length} attachments:`,
-          msg.experimental_attachments
-        );
       }
     });
   }, [displayMessages]);

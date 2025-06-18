@@ -48,7 +48,7 @@ export async function getChats(): Promise<ChatItem[]> {
           id: msg._id.toString(),
           role: msg.role,
           content: msg.content,
-          attachments: msg.attachments || [], 
+          attachments: msg.attachments || [],
           createdAt: msg.createdAt || new Date(),
         })),
       };
@@ -92,7 +92,7 @@ export async function getChat(chatId: string): Promise<ChatItem | null> {
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
-        attachments: msg.attachments || [], 
+        attachments: msg.attachments || [],
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -174,7 +174,7 @@ export async function createChat(
         id: msg._id.toString(),
         role: msg.role,
         content: msg.content,
-        attachments: msg.attachments || [], 
+        attachments: msg.attachments || [],
         createdAt: msg.createdAt || new Date(),
       })),
     };
@@ -190,7 +190,7 @@ export async function createChat(
 export async function updateChat(
   chatId: string,
   messages: AIMessage[],
-  attachments?: MessageAttachment[] 
+  attachments?: MessageAttachment[]
 ): Promise<ChatItem> {
   try {
     const user = await currentUser();
@@ -207,20 +207,55 @@ export async function updateChat(
       throw new Error("Chat not found");
     }
 
+  
     await Message.deleteMany({ chat: chatId });
 
     const messageIds = [];
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
 
-      const messageAttachments =
-        attachments &&
-        attachments.length > 0 &&
-        msg.role === "user" &&
-        i === messages.length - 2
-          ? attachments
-          : [];
+      let messageAttachments: MessageAttachment[] = [];
 
+      if (
+        msg.experimental_attachments &&
+        msg.experimental_attachments.length > 0
+      ) {
+        messageAttachments = msg.experimental_attachments.map((att) => ({
+          id: att.url || `att-${Date.now()}`,
+          url: att.url,
+          name: att.name || "Unknown",
+          type: "image", 
+          mimeType: att.contentType || "application/octet-stream",
+          size: (att as any).size || 0,
+          width: (att as any).width,
+          height: (att as any).height,
+          pages: (att as any).pages,
+          provider: "upload",
+        }));
+      
+      }
+      else if (
+        (msg as any).attachments &&
+        (msg as any).attachments.length > 0
+      ) {
+        messageAttachments = (msg as any).attachments;
+       
+      }
+      else if (attachments && attachments.length > 0 && msg.role === "user") {
+        const userMessages = messages.filter((m) => m.role === "user");
+        const currentUserMessageIndex = userMessages.findIndex(
+          (m) => m === msg
+        );
+        const isLastUserMessage =
+          currentUserMessageIndex === userMessages.length - 1;
+
+        if (isLastUserMessage) {
+          messageAttachments = attachments;
+        
+        }
+      }
+
+     
       const message = await Message.create({
         chat: chatId,
         role: msg.role,
@@ -230,9 +265,11 @@ export async function updateChat(
       messageIds.push(message._id);
     }
 
+    // Update chat with new message IDs
     chat.messages = messageIds;
     await chat.save();
 
+    // Fetch and return updated chat
     const populatedChat = await Chat.findById(chatId)
       .populate({
         path: "messages",
@@ -263,6 +300,7 @@ export async function updateChat(
       })),
     };
 
+ 
     revalidatePath(`/chat/${chatId}`);
     revalidatePath("/chat");
     return updatedChat;
@@ -417,7 +455,7 @@ export async function searchChatsByAttachment(
           id: msg._id.toString(),
           role: msg.role,
           content: msg.content,
-          attachments: msg.attachments || [], 
+          attachments: msg.attachments || [],
           createdAt: msg.createdAt || new Date(),
         })),
       };
@@ -444,7 +482,7 @@ export async function getAttachmentStats(): Promise<{
     await dbConnect();
 
     const messages = await Message.find({
-      "attachments.0": { $exists: true }, 
+      "attachments.0": { $exists: true },
     }).populate({
       path: "chat",
       match: { userId: user.id },

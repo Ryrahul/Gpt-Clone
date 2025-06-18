@@ -39,7 +39,6 @@ class Mem0Service {
         },
       });
 
-      console.log("Memory added successfully for user:", userId);
       return result;
     } catch (error) {
       console.error("Error adding memory:", error);
