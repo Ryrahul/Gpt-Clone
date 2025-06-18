@@ -72,7 +72,7 @@ export function ChatInterface({
   const { transformedMessages, cleanMessagesForAI } =
     useMessageTransformer(initialMessages);
 
-  // ✅ CRITICAL FIX: Convert database attachments to experimental_attachments format
+  //  CRITICAL FIX: Convert database attachments to experimental_attachments format as image was not persissted
   const messagesWithExperimentalAttachments = useCallback((): Message[] => {
     if (!initialMessages || initialMessages.length === 0) return [];
 
@@ -84,7 +84,7 @@ export function ChatInterface({
         createdAt: msg.createdAt,
       };
 
-      // If message has attachments from database, convert to experimental_attachments
+      // If message has attachments from database, convert to experimental_attachments(ai accepts the vercel one in this format)
       if (msg.attachments && msg.attachments.length > 0) {
         const experimentalAttachments = msg.attachments.map(
           (att: MessageAttachment) => ({
