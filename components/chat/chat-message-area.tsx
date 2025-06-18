@@ -43,20 +43,45 @@ export function ChatMessagesArea({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageCountRef = useRef(displayMessages.length);
   const lastMessageContentRef = useRef("");
+  const lastUserScrollRef = useRef<number>(0);
+  const scrollDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   const [isMobile, setIsMobile] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+  const scrollToBottom = useCallback(
+    (force = false) => {
+      const viewport = scrollViewportRef.current;
+      if (!viewport) return;
 
+      const now = Date.now();
+      const recentUserScroll =
+        lastUserScrollRef.current && now - lastUserScrollRef.current < 2000;
+
+      if (!force && (!shouldAutoScroll || recentUserScroll)) {
+        return;
+      }
+
+      if (isMobile && !force) {
+        const { scrollTop, scrollHeight, clientHeight } = viewport;
+        const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+        if (!isAtBottom) return;
+      }
+
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: "smooth",
+      });
+    },
+    [shouldAutoScroll, isMobile]
+  );
+
+  useEffect(() => {
+    // Mobile detection
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
-  useEffect(() => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector(
         "[data-radix-scroll-area-viewport]"
@@ -65,43 +90,39 @@ export function ChatMessagesArea({
         scrollViewportRef.current = viewport;
       }
     }
-  }, []);
 
-  const checkScrollPosition = useCallback(() => {
-    if (!scrollViewportRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = scrollViewportRef.current;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-    setShouldAutoScroll(isNearBottom);
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      if (scrollDebounceRef.current) {
+        clearTimeout(scrollDebounceRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
     const viewport = scrollViewportRef.current;
     if (!viewport) return;
 
-    viewport.addEventListener("scroll", checkScrollPosition);
-    return () => viewport.removeEventListener("scroll", checkScrollPosition);
-  }, [checkScrollPosition]);
-  const scrollToBottom = useCallback(
-    (force = false) => {
-      if (!shouldAutoScroll && !force) return;
+    const checkScrollPosition = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      const threshold = isMobile ? 200 : 100;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < threshold;
 
-      const viewport = scrollViewportRef.current;
-      if (!viewport) return;
-
-      if (isMobile) {
-        viewport.scrollTop = viewport.scrollHeight;
-      } else {
-        viewport.scrollTo({
-          top: viewport.scrollHeight,
-          behavior: "smooth",
-        });
+      if (scrollDebounceRef.current) {
+        clearTimeout(scrollDebounceRef.current);
       }
-    },
-    [shouldAutoScroll, isMobile]
-  );
+      scrollDebounceRef.current = setTimeout(() => {
+        setShouldAutoScroll(isNearBottom);
+      }, 150);
+    };
 
-  useEffect(() => {
+    const handleScroll = () => {
+      lastUserScrollRef.current = Date.now();
+      checkScrollPosition();
+    };
+
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+
     const messageCountChanged =
       displayMessages.length !== lastMessageCountRef.current;
     const lastMessage = displayMessages[displayMessages.length - 1];
@@ -112,8 +133,10 @@ export function ChatMessagesArea({
     lastMessageCountRef.current = displayMessages.length;
     lastMessageContentRef.current = lastMessageContent;
 
+    let scrollTimeout: NodeJS.Timeout | undefined;
+
     if (messageCountChanged || messageContentChanged || isLoading) {
-      const scrollTimeout = setTimeout(
+      scrollTimeout = setTimeout(
         () => {
           requestAnimationFrame(() => {
             scrollToBottom(messageCountChanged);
@@ -121,19 +144,25 @@ export function ChatMessagesArea({
         },
         messageCountChanged ? 100 : 50
       );
-
-      return () => clearTimeout(scrollTimeout);
     }
-  }, [displayMessages, isLoading, scrollToBottom]);
 
-  useEffect(() => {
-    if (displayMessages.length > 0) {
-      const timeout = setTimeout(() => {
+    if (displayMessages.length === 1) {
+      const initialScrollTimeout = setTimeout(() => {
         scrollToBottom(true);
-      }, 200);
-      return () => clearTimeout(timeout);
+      }, 300);
+
+      return () => {
+        viewport.removeEventListener("scroll", handleScroll);
+        clearTimeout(scrollTimeout);
+        clearTimeout(initialScrollTimeout);
+      };
     }
-  }, [scrollToBottom]);
+
+    return () => {
+      viewport.removeEventListener("scroll", handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [displayMessages, isLoading, isMobile, scrollToBottom]);
 
   const hasAIStartedResponding =
     messages.length > 0 && messages[messages.length - 1]?.role === "assistant";
@@ -204,17 +233,18 @@ export function ChatMessagesArea({
                 </div>
               )}
 
-              {/* Scroll anchor */}
               <div ref={messagesEndRef} className="h-1" />
             </div>
           </div>
         )}
       </ScrollArea>
 
-      {/* Scroll to bottom button - shows when user scrolls up */}
       {!shouldAutoScroll && displayMessages.length > 0 && (
         <button
-          onClick={() => scrollToBottom(true)}
+          onClick={() => {
+            lastUserScrollRef.current = 0;
+            scrollToBottom(true);
+          }}
           className="absolute bottom-4 right-4 bg-[#10a37f] hover:bg-[#0d8f6f] text-white p-2 rounded-full shadow-lg transition-all duration-200 z-10"
           aria-label="Scroll to bottom"
         >

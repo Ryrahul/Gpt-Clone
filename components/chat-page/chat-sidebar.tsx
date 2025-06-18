@@ -1,5 +1,6 @@
 "use client";
 
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -63,13 +64,16 @@ export function ChatSidebar({
       <div className="flex-shrink-0 p-3">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7">
+            <button
+              onClick={() => router.push("/")}
+              className="w-7 h-7 hover:opacity-80 transition-opacity"
+            >
               <img
                 src="/chatgpt-4.svg"
                 alt="ChatGPT"
-                className="w-full h-full brightness-0 invert"
+                className="w-full h-full brightness-0 invert cursor-pointer"
               />
-            </div>
+            </button>
           </div>
           <div className="flex items-center gap-1">
             <Button

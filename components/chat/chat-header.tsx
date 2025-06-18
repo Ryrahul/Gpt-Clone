@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 
 import { Brain, Paperclip, PanelLeft, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,9 +49,17 @@ export function ChatHeader({
         )}
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <h1 className="text-[#FEFEFE] text-[15px] sm:text-[17px] leading-[20px] sm:leading-[24px] font-light">
-            ChatGPT
-          </h1>
+          <button
+            onClick={() => {
+              const router = useRouter();
+              router.push("/");
+            }}
+            className="hover:opacity-80 transition-opacity"
+          >
+            <h1 className="text-[#FEFEFE] text-[15px] sm:text-[17px] leading-[20px] sm:leading-[24px] font-light cursor-pointer">
+              ChatGPT
+            </h1>
+          </button>
         </div>
       </div>
 
