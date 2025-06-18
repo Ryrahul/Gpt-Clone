@@ -125,7 +125,6 @@ export function ChatInterface({
     append,
   } = useChat({
     api: "/api/chat",
-    // ✅ CRITICAL FIX: Use messages with experimental_attachments restored from database
     initialMessages: messagesWithExperimentalAttachments(),
     id: chatInstanceId.current,
     onFinish: (message) => {
@@ -175,7 +174,7 @@ export function ChatInterface({
   ]);
 
   /**
-   * SAVE MESSAGES useEffect - Simplified to work with fixed backend
+   * SAVE MESSAGES useEffect - Simplified to work with fixed backend for image issues 
    */
   useEffect(() => {
     if (!isSignedIn || !hasMounted) return;
@@ -187,7 +186,7 @@ export function ChatInterface({
       // Guard: Only save if we have new messages
       if (messages.length <= lastSavedLengthRef.current) return;
 
-      // Guard: Don't save immediately after user messages (wait for AI response)
+      // Guard: Don't save immediately after user messages (wait for AI response so that there is no inconsistencyy)
       if (messages.length > 0 && messages[messages.length - 1]?.role === "user")
         return;
 
@@ -197,7 +196,7 @@ export function ChatInterface({
       try {
         isSavingRef.current = true;
 
-        // ✅ Only collect global attachments from current session uploads
+        // Only collect global attachments from current session uploads
         let globalAttachments: MessageAttachment[] | undefined = undefined;
 
         if (uploadedFiles.length > 0) {
@@ -215,7 +214,6 @@ export function ChatInterface({
           }));
         }
 
-        // Debug: Log which messages have experimental_attachments
         messages.forEach((msg, idx) => {
           if (
             msg.experimental_attachments &&
@@ -279,7 +277,7 @@ export function ChatInterface({
     // Generate unique instance ID to prevent AI SDK conflicts
     chatInstanceId.current = `chat-${chatId || "new"}-${Date.now()}`;
 
-    // ✅ CRITICAL FIX: Reinitialize with experimental_attachments restored
+    // CRITICAL FIX: Reinitialize with experimental_attachments restored (get preovious attachment paila ko )
     const messagesWithAttachments = messagesWithExperimentalAttachments();
 
     // Debug: Log which messages have attachments
