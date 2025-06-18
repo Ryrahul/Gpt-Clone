@@ -230,7 +230,7 @@ export function ChatSidebar({
 
       <div
         className={`hidden md:flex bg-[#171717] border-r border-white/10 flex-col h-screen transition-all duration-300 ease-in-out relative ${
-          isCollapsed ? "w-0 overflow-hidden" : "w-72"
+          isCollapsed ? "w-0 overflow-hidden" : "w-80"
         }`}
       >
         {sidebarContent}
