@@ -98,12 +98,11 @@ export function ChatMessagesArea({
         });
       }
     },
-    
     [shouldAutoScroll, isMobile]
   );
 
   useEffect(() => {
-    const emessageCountChanged =
+    const messageCountChanged =
       displayMessages.length !== lastMessageCountRef.current;
     const lastMessage = displayMessages[displayMessages.length - 1];
     const lastMessageContent = lastMessage?.content || "";
