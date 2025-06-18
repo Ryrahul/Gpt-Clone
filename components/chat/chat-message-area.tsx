@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Message } from "ai";
 import { ChatMessage } from "@/components/chat/chat-message";
@@ -39,10 +39,12 @@ export function ChatMessagesArea({
   onEditMessage,
 }: ChatMessagesAreaProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const lastMessageCountRef = useRef(displayMessages.length);
+  const lastMessageContentRef = useRef("");
   const [isMobile, setIsMobile] = useState(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -55,59 +57,91 @@ export function ChatMessagesArea({
   }, []);
 
   useEffect(() => {
-    const scrollArea = scrollAreaRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
-    );
-    if (!scrollArea) return;
-
-    const handleScroll = () => {
-      setIsUserScrolling(true);
-
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLDivElement;
+      if (viewport) {
+        scrollViewportRef.current = viewport;
       }
+    }
+  }, []);
 
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsUserScrolling(false);
-      }, 150);
-    };
+  const checkScrollPosition = useCallback(() => {
+    if (!scrollViewportRef.current) return;
 
-    scrollArea.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      scrollArea.removeEventListener("scroll", handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
+    const { scrollTop, scrollHeight, clientHeight } = scrollViewportRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    setShouldAutoScroll(isNearBottom);
   }, []);
 
   useEffect(() => {
-    if (isUserScrolling) return;
+    const viewport = scrollViewportRef.current;
+    if (!viewport) return;
 
-    const scrollToBottom = () => {
-      if (messagesEndRef.current) {
-        const behavior = isMobile ? "auto" : "smooth";
-        messagesEndRef.current.scrollIntoView({
-          behavior,
-          block: "end",
-          inline: "nearest",
+    viewport.addEventListener("scroll", checkScrollPosition);
+    return () => viewport.removeEventListener("scroll", checkScrollPosition);
+  }, [checkScrollPosition]);
+  const scrollToBottom = useCallback(
+    (force = false) => {
+      if (!shouldAutoScroll && !force) return;
+
+      const viewport = scrollViewportRef.current;
+      if (!viewport) return;
+
+      if (isMobile) {
+        viewport.scrollTop = viewport.scrollHeight;
+      } else {
+        viewport.scrollTo({
+          top: viewport.scrollHeight,
+          behavior: "smooth",
         });
       }
-    };
+    },
+    
+    [shouldAutoScroll, isMobile]
+  );
 
-    // Shorter delay for mobile to prevent keyboard interference
-    const delay = isMobile ? 50 : 100;
-    const timeoutId = setTimeout(scrollToBottom, delay);
+  useEffect(() => {
+    const emessageCountChanged =
+      displayMessages.length !== lastMessageCountRef.current;
+    const lastMessage = displayMessages[displayMessages.length - 1];
+    const lastMessageContent = lastMessage?.content || "";
+    const messageContentChanged =
+      lastMessageContent !== lastMessageContentRef.current;
 
-    return () => clearTimeout(timeoutId);
-  }, [displayMessages, isLoading, isUserScrolling, isMobile]);
+    lastMessageCountRef.current = displayMessages.length;
+    lastMessageContentRef.current = lastMessageContent;
+
+    if (messageCountChanged || messageContentChanged || isLoading) {
+      const scrollTimeout = setTimeout(
+        () => {
+          requestAnimationFrame(() => {
+            scrollToBottom(messageCountChanged);
+          });
+        },
+        messageCountChanged ? 100 : 50
+      );
+
+      return () => clearTimeout(scrollTimeout);
+    }
+  }, [displayMessages, isLoading, scrollToBottom]);
+
+  useEffect(() => {
+    if (displayMessages.length > 0) {
+      const timeout = setTimeout(() => {
+        scrollToBottom(true);
+      }, 200);
+      return () => clearTimeout(timeout);
+    }
+  }, [scrollToBottom]);
 
   const hasAIStartedResponding =
     messages.length > 0 && messages[messages.length - 1]?.role === "assistant";
 
   return (
-    <div className="flex-1 overflow-hidden bg-[#212121]">
-      <ScrollArea ref={scrollAreaRef} className="h-full">
+    <div className="flex-1 overflow-hidden bg-[#212121] relative">
+      <ScrollArea ref={scrollAreaRef} className="h-full" type="auto">
         {displayMessages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <ChatEmptyState />
@@ -142,13 +176,12 @@ export function ChatMessagesArea({
                         <div className="flex-1 flex items-center">
                           <div className="relative">
                             <div
-                              className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full"
+                              className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full animate-pulse"
                               style={{
-                                animation: "breathe 2s ease-in-out infinite",
                                 boxShadow:
                                   "0 0 8px rgba(255, 255, 255, 0.4), 0 0 4px rgba(255, 255, 255, 0.2)",
                               }}
-                            ></div>
+                            />
                           </div>
                         </div>
                       </div>
@@ -157,14 +190,12 @@ export function ChatMessagesArea({
                         <div className="flex items-center gap-2 text-white/40 text-xs sm:text-sm">
                           <div className="relative">
                             <div
-                              className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/60 rounded-full"
+                              className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/60 rounded-full animate-pulse"
                               style={{
-                                animation:
-                                  "subtleBreathe 1.5s ease-in-out infinite",
                                 boxShadow:
                                   "0 0 6px rgba(255, 255, 255, 0.3), 0 0 3px rgba(255, 255, 255, 0.1)",
                               }}
-                            ></div>
+                            />
                           </div>
                           <span>Generating response...</span>
                         </div>
@@ -174,44 +205,34 @@ export function ChatMessagesArea({
                 </div>
               )}
 
+              {/* Scroll anchor */}
               <div ref={messagesEndRef} className="h-1" />
             </div>
           </div>
         )}
       </ScrollArea>
-      <style jsx>{`
-        @keyframes breathe {
-          0%,
-          100% {
-            transform: scale(1);
-            opacity: 0.9;
-            box-shadow: 0 0 6px rgba(255, 255, 255, 0.4),
-              0 0 3px rgba(255, 255, 255, 0.2);
-          }
-          50% {
-            transform: scale(1.15);
-            opacity: 1;
-            box-shadow: 0 0 12px rgba(255, 255, 255, 0.6),
-              0 0 6px rgba(255, 255, 255, 0.3);
-          }
-        }
 
-        @keyframes subtleBreathe {
-          0%,
-          100% {
-            transform: scale(1);
-            opacity: 0.7;
-            box-shadow: 0 0 4px rgba(255, 255, 255, 0.3),
-              0 0 2px rgba(255, 255, 255, 0.1);
-          }
-          50% {
-            transform: scale(1.1);
-            opacity: 0.9;
-            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4),
-              0 0 4px rgba(255, 255, 255, 0.2);
-          }
-        }
-      `}</style>
+      {/* Scroll to bottom button - shows when user scrolls up */}
+      {!shouldAutoScroll && displayMessages.length > 0 && (
+        <button
+          onClick={() => scrollToBottom(true)}
+          className="absolute bottom-4 right-4 bg-[#10a37f] hover:bg-[#0d8f6f] text-white p-2 rounded-full shadow-lg transition-all duration-200 z-10"
+          aria-label="Scroll to bottom"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
