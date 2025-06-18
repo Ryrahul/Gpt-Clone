@@ -101,7 +101,7 @@ export function ChatSidebar({
           >
             <div className="flex items-center gap-3">
               <Edit3 className="h-5 w-5" />
-              <span className="text-[#FEFEFE] text-[15px] leading-[22px] font-light">
+              <span className="text-[#FEFEFE] text-[17px] leading-[22px] font-light">
                 New chat
               </span>
             </div>
@@ -112,7 +112,7 @@ export function ChatSidebar({
             className="w-full h-12 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-4 rounded-lg"
           >
             <Search className="h-5 w-5" />
-            <span className="text-[#FEFEFE] text-[15px] leading-[22px] font-light">
+            <span className="text-[#FEFEFE] text-[17px] leading-[22px] font-light">
               Search chats
             </span>
           </Button>
@@ -125,7 +125,7 @@ export function ChatSidebar({
             className="w-full h-12 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-4 rounded-lg"
           >
             <Brain className="h-5 w-5" />
-            <span className="text-[#FEFEFE] text-[15px] leading-[22px] font-light">
+            <span className="text-[#FEFEFE] text-[17px] leading-[22px] font-light">
               Memories
             </span>
           </Button>
@@ -135,7 +135,7 @@ export function ChatSidebar({
             className="w-full h-12 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-4 rounded-lg"
           >
             <Play className="h-5 w-5" />
-            <span className="text-[#FEFEFE] text-[15px] leading-[22px] font-light">
+            <span className="text-[#FEFEFE] text-[17px] leading-[22px] font-light">
               Sora
             </span>
           </Button>
@@ -145,7 +145,7 @@ export function ChatSidebar({
             className="w-full h-12 bg-transparent hover:bg-white/10 text-white flex items-center justify-start gap-3 px-4 rounded-lg"
           >
             <Grid3X3 className="h-5 w-5" />
-            <span className="text-[#FEFEFE] text-[15px] leading-[22px] font-light">
+            <span className="text-[#FEFEFE] text-[17px] leading-[22px] font-light">
               GPTs
             </span>
           </Button>

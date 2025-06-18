@@ -84,7 +84,7 @@ export function ChatHistory({
               onMouseLeave={() => setHoveredChat(null)}
             >
               <div className="flex-1 min-w-0 pr-8">
-                <div className="truncate text-[#FEFEFE] text-[16px] leading-[22px] font-light">
+                <div className="truncate text-[#FEFEFE] text-[17px] leading-[22px] font-light">
                   {chat.title}
                 </div>
               </div>
