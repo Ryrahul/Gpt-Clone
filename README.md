@@ -13,7 +13,7 @@ It features user authentication, AI chat, persistent message history, message re
 - **AI Integration**: OpenAI
 - **Memory**: Mem0 API
 - **File Uploads**: Cloudinary
-- **DevOps**: Docker, Docker Compose
+- **DevOps**: Docker,  Docker Compose
 
 ---
 
