@@ -15,7 +15,7 @@ It features user authentication, AI chat, persistent message history, message re
 - **File Uploads**: Cloudinary
 - **DevOps**: Docker,  Docker Compose
 
----
+--
 
 ##  Getting Started
 
