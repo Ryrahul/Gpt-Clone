@@ -1,5 +1,3 @@
-import { encoding_for_model } from "tiktoken";
-
 // Model configurations with token limits
 export const MODEL_CONFIGS = {
   "gpt-4.1": {
@@ -42,18 +40,7 @@ export class TokenManager {
 
   constructor(model: ModelName = "gpt-4.1") {
     this.model = model;
-    try {
-      // Use gpt-4o encoding for GPT-4.1 and GPT-4 variants, gpt-3.5-turbo for 3.5
-      const encodingModel = model.startsWith("gpt-4")
-        ? "gpt-4o"
-        : "gpt-3.5-turbo";
-      this.encoding = encoding_for_model(encodingModel as any);
-    } catch (error) {
-      console.warn(
-        "Failed to load tiktoken encoding, using fallback estimation"
-      );
-      this.encoding = null;
-    }
+    this.encoding = null;
   }
 
   /**

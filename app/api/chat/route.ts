@@ -82,8 +82,11 @@ export async function POST(req: Request) {
     });
 
     return result.toDataStreamResponse();
-  } catch (error) {
-    console.error("Chat API error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+  } catch (error: any) {
+    console.error("Chat API error:", error?.message, error?.stack);
+    return new Response(
+      JSON.stringify({ error: error?.message || "Internal Server Error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }
