@@ -5,7 +5,7 @@ const nextConfig = {
       bodySizeLimit: "50mb", // Increase limit for file uploads
     },
   },
-  serverExternalPackages: ["pdf-parse", "tiktoken"],
+  serverExternalPackages: ["pdf-parse"],
 
   eslint: {
     ignoreDuringBuilds: true,

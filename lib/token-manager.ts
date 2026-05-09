@@ -44,7 +44,7 @@ export class TokenManager {
   }
 
   /**
-   * Count tokens in text using tiktoken or fallback estimation
+   * Count tokens in text using estimation
    */
   countTokens(text: string): number {
     if (!text) return 0;
