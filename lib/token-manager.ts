@@ -2,6 +2,12 @@ import { encoding_for_model } from "tiktoken";
 
 // Model configurations with token limits
 export const MODEL_CONFIGS = {
+  "gpt-4.1": {
+    maxTokens: 1047576,
+    maxOutputTokens: 32768,
+    costPer1kInput: 0.002,
+    costPer1kOutput: 0.008,
+  },
   "gpt-4o": {
     maxTokens: 128000,
     maxOutputTokens: 4096,
@@ -34,12 +40,12 @@ export class TokenManager {
   private model: ModelName;
   private encoding: any;
 
-  constructor(model: ModelName = "gpt-4o") {
+  constructor(model: ModelName = "gpt-4.1") {
     this.model = model;
     try {
-      // Use gpt-4 encoding for all GPT-4 variants, gpt-3.5-turbo for 3.5
+      // Use gpt-4o encoding for GPT-4.1 and GPT-4 variants, gpt-3.5-turbo for 3.5
       const encodingModel = model.startsWith("gpt-4")
-        ? "gpt-4"
+        ? "gpt-4o"
         : "gpt-3.5-turbo";
       this.encoding = encoding_for_model(encodingModel as any);
     } catch (error) {

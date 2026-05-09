@@ -1,8 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
-import { openai } from "@ai-sdk/openai";
+import { createAzure } from "@ai-sdk/azure";
 import { streamText } from "ai";
 import { mem0Service } from "@/lib/mem0";
 import { ModelName, TokenManager } from "@/lib/token-manager";
+
+const azure = createAzure({
+  resourceName: process.env.AZURE_OPENAI_RESOURCE_NAME,
+  apiKey: process.env.AZURE_OPENAI_API_KEY,
+});
 
 export const maxDuration = 30;
 
@@ -16,7 +21,8 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const messages = body.messages;
-    const model = "gpt-4o" as ModelName;
+    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4.1";
+    const model = "gpt-4.1" as ModelName;
     const tokenManager = new TokenManager(model);
 
     const normalizedMessages = messages.map((msg: any) => ({
@@ -62,7 +68,7 @@ export async function POST(req: Request) {
     ];
 
     const result = streamText({
-      model: openai(model),
+      model: azure(deploymentName),
       messages: messagesWithMemory,
       onFinish: async () => {
         try {
