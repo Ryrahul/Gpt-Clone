@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       ...messages,
     ];
 
-    const result = streamText({
+    const result = await streamText({
       model: azure(deploymentName),
       messages: messagesWithMemory,
       onFinish: async () => {
@@ -84,9 +84,12 @@ export async function POST(req: Request) {
 
     return result.toDataStreamResponse();
   } catch (error: any) {
-    console.error("Chat API error:", error?.message, error?.stack);
+    console.error("Chat API error:", error?.message, error?.stack, error?.cause);
     return new Response(
-      JSON.stringify({ error: error?.message || "Internal Server Error" }),
+      JSON.stringify({
+        error: error?.message || "Internal Server Error",
+        cause: error?.cause?.message,
+      }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
