@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     ];
 
     const result = await streamText({
-      model: azure.chat(deploymentName),
+      model: azure(deploymentName),
       messages: messagesWithMemory,
       onFinish: async () => {
         try {
